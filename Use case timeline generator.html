@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Resource & Timeline Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/dayjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/plugin/isoWeek.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/plugin/utc.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/plugin/timezone.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/plugin/minMax.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .gantt-chart-container {
+            position: relative;
+            overflow-x: auto;
+            transition: height 0.3s ease-in-out;
+            height: 400px; /* Default height */
+        }
+        .gantt-chart-container.gantt-expanded {
+            height: 800px; /* Expanded height */
+        }
+        .gantt-bar {
+            position: absolute;
+            height: 24px;
+            border-radius: 4px;
+            color: white;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.2s ease-in-out;
+        }
+        .gantt-bar:hover {
+            opacity: 0.8;
+            transform: translateY(-1px);
+        }
+        /* Accenture Theme Colors */
+        .gantt-bar-dev { background-color: #a700a5; } /* Purple */
+        .gantt-bar-uat { background-color: #6a0dad; } /* Medium Purple */
+        .gantt-bar-deploy { background-color: #4b0082; } /* Indigo */
+
+        .gantt-bar-shared { 
+            background: repeating-linear-gradient(45deg, #6a0dad, #6a0dad 10px, #805ad5 10px, #805ad5 20px);
+        }
+        .highlight-new {
+            background-color: #e6e6fa !important; /* Lavender */
+            animation: fadeIn 1s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: absolute;
+            z-index: 100;
+            border: 1px solid #ccc;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        table thead th {
+            background-color: #f9fafb;
+        }
+         tbody tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        .tab-btn.active {
+            border-color: #a700a5;
+            color: #a700a5;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Notification Area -->
+    <div id="notification-area" class="hidden fixed top-5 right-5 z-50">
+        <div id="notification-content" class="bg-red-500 text-white font-bold rounded-lg border-2 border-red-600 shadow-lg p-4 max-w-sm">
+            <!-- Message will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="manual-assigner" class="modal p-4 space-y-2">
+        <h3 id="assigner-title" class="font-semibold">Assign Task</h3>
+        <input type="text" id="assigner-search" placeholder="Search for a use case..." class="w-full p-2 border rounded-md">
+        <div id="assigner-list" class="space-y-1 max-h-60 overflow-y-auto"></div>
+        <button id="assigner-close" class="mt-2 text-sm text-red-500">Close</button>
+    </div>
+    
+    <div id="share-modal" class="modal p-4 space-y-2">
+        <h3 id="share-modal-title" class="font-semibold">Share Task</h3>
+        <div id="share-developer-list" class="space-y-1 max-h-60 overflow-y-auto"></div>
+        <div class="flex space-x-2 mt-2">
+            <button id="share-confirm-btn" class="bg-purple-600 text-white py-1 px-3 rounded-md text-sm">Confirm</button>
+            <button id="share-close-btn" class="text-sm text-red-500">Cancel</button>
+        </div>
+    </div>
+
+
+    <div class="space-y-8">
+        
+        <!-- Header -->
+        <header class="text-center">
+            <h1 class="text-4xl font-bold text-purple-900">Resource Allocation & Timeline Generator</h1>
+            <p class="text-lg text-gray-600 mt-2">An Executive Dashboard for Project Planning and Resource Management</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Left Panel: Inputs -->
+            <div class="lg:col-span-4 space-y-6">
+                <div class="card">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">1. Project Configuration</h2>
+                    <div class="space-y-4 pt-4">
+                        <div>
+                            <label for="startDate" class="block text-sm font-medium text-gray-600">Project Start Date</label>
+                            <input type="date" id="startDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50">
+                        </div>
+                        <div>
+                            <label for="endDate" class="block text-sm font-medium text-gray-600">Project End Date</label>
+                            <input type="date" id="endDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50">
+                        </div>
+                         <div>
+                            <label for="configFile" class="block text-sm font-medium text-gray-600">Upload Configuration File (.xlsx)</label>
+                            <input type="file" id="configFile" accept=".xlsx" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
+                        </div>
+                        <a href="#" download="sample_config.csv" id="download-template" class="text-sm text-purple-600 hover:underline">Download Sample Template (CSV)</a>
+                        <p class="text-xs text-gray-500 pt-2">Please use an Excel file with sheets named 'usecases', 'developers', and 'complexity'.</p>
+                    </div>
+                </div>
+                
+                 <!-- Action Buttons -->
+                <div class="flex flex-col space-y-3">
+                    <button id="generate-btn" class="w-full bg-purple-600 text-white py-3 px-4 rounded-md hover:bg-purple-700 font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition text-lg" disabled>Generate Timeline</button>
+                    <button id="reset-btn" class="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition">Reset</button>
+                </div>
+                
+                <!-- File Summary Display -->
+                <div id="file-summary" class="hidden space-y-6">
+                     <div class="card">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Resource Summary</h2>
+                        <div id="resource-summary" class="space-y-4 pt-4"></div>
+                    </div>
+                     <div class="card">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Complexity Summary (Days)</h2>
+                        <div id="complexity-summary" class="space-y-2 pt-4 text-sm"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Output -->
+            <div id="output-panel" class="lg:col-span-8 space-y-8 hidden">
+                <!-- Executive Summary -->
+                <div class="card">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Executive Summary</h2>
+                    <div id="executive-summary" class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 text-center">
+                       <!-- Stats will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Tab Navigation -->
+                <div>
+                    <div class="border-b border-gray-200">
+                        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                            <button data-tab="gantt" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm active">
+                                Gantt & Workload
+                            </button>
+                            <button data-tab="timeline" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                Generated Timeline
+                            </button>
+                            <button data-tab="backlog" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                                Unassigned Backlog
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="mt-8">
+                    <div id="tab-content-gantt" class="tab-content space-y-8">
+                        <!-- Gantt Chart Summary -->
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-2xl font-semibold text-gray-800">Gantt Chart Summary</h2>
+                                <button id="expand-gantt-btn" class="bg-gray-200 text-gray-700 py-1 px-3 rounded-md hover:bg-gray-300 text-sm">Expand</button>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg">
+                                <!-- Legend -->
+                                <div class="flex items-center space-x-4 mb-4">
+                                     <div class="flex items-center"><div class="w-4 h-4 rounded mr-2" style="background-color: #a700a5;"></div><span class="text-sm">Development</span></div>
+                                     <div class="flex items-center"><div class="w-4 h-4 rounded mr-2" style="background-color: #6a0dad;"></div><span class="text-sm">UAT</span></div>
+                                     <div class="flex items-center"><div class="w-4 h-4 rounded mr-2" style="background-color: #4b0082;"></div><span class="text-sm">Deployment</span></div>
+                                </div>
+
+                                <div id="gantt-chart-container" class="gantt-chart-container">
+                                    <div id="gantt-chart" class="relative h-full">
+                                        <!-- Gantt chart rows will be dynamically added here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                         <!-- Developer Workload Summary -->
+                        <div class="card">
+                            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Developer Workload Summary</h2>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full">
+                                    <thead>
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Developer</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Work (Hrs)</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Capacity (Hrs)</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Dates</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity Left (Hrs)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="developer-summary-table-body" class="divide-y divide-gray-200">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-content-timeline" class="tab-content hidden">
+                        <!-- Timeline Table -->
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-2xl font-semibold text-gray-800">Generated Timeline</h2>
+                                <div class="flex space-x-2">
+                                     <button id="export-excel-btn" class="bg-purple-700 text-white py-2 px-4 rounded-md hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition">Export to Excel</button>
+                                     <button id="export-csv-btn" class="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition">Export Timeline (CSV)</button>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full">
+                                    <thead>
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resource</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Use Case ID</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Complexity</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dev Start</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dev</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UAT</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deployment</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="timeline-table-body" class="divide-y divide-gray-200">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="tab-content-backlog" class="tab-content hidden">
+                        <!-- Unassigned Use Cases -->
+                        <div class="card">
+                            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Unassigned Use Case Backlog</h2>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full">
+                                     <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Use Case ID</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skills</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Complexity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="backlog-table-body" class="divide-y divide-gray-200">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+             <!-- Initial state message -->
+             <div id="initial-message" class="lg:col-span-8 flex items-center justify-center card h-full">
+                <div class="text-center p-8">
+                     <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <h3 class="mt-4 text-xl font-medium text-gray-900">Upload a Configuration File</h3>
+                    <p class="mt-2 text-base text-gray-500">Please upload an Excel (.xlsx) file with 'usecases', 'developers', and 'complexity' sheets to begin.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        dayjs.extend(dayjs_plugin_isoWeek);
+        dayjs.extend(dayjs_plugin_utc);
+        dayjs.extend(dayjs_plugin_timezone);
+        dayjs.extend(window.dayjs_plugin_minMax);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = dayjs();
+            
+            function setDefaultDates() {
+                document.getElementById('startDate').value = today.format('YYYY-MM-DD');
+                document.getElementById('endDate').value = today.add(3,'month').format('YYYY-MM-DD');
+            }
+
+            // --- UI ELEMENT REFERENCES ---
+            const generateBtn = document.getElementById('generate-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const exportCsvBtn = document.getElementById('export-csv-btn');
+            const exportExcelBtn = document.getElementById('export-excel-btn');
+            const configFile = document.getElementById('configFile');
+            const outputPanel = document.getElementById('output-panel');
+            const initialMessage = document.getElementById('initial-message');
+            const downloadTemplateLink = document.getElementById('download-template');
+            const expandGanttBtn = document.getElementById('expand-gantt-btn');
+            const manualAssigner = document.getElementById('manual-assigner');
+            const assignerCloseBtn = document.getElementById('assigner-close');
+            const assignerSearch = document.getElementById('assigner-search');
+            
+            // --- STATE MANAGEMENT ---
+            let generatedTimelineData = []; 
+            let unassignedBacklogData = [];
+            let rawParsedData = null;
+            let currentAssignerTarget = null;
+            let complexityConfig = {};
+
+            // --- HELPER FUNCTIONS (GLOBAL SCOPE WITHIN DOMCONTENTLOADED) ---
+            const getPriorityValue = (uc) => {
+                const priority = String(uc.Priority || '').toLowerCase();
+                const onshore = String(uc['Onshore?'] || '').toLowerCase();
+                if (priority.includes('1')) return 1;
+                if (priority.includes('2')) return 2;
+                if (onshore === 'yes') return 3;
+                if (priority.includes('3')) return 4;
+                return 5;
+            };
+
+            const getSuitabilityScore = (developer, useCase) => {
+                const level = developer.level;
+                const complexity = useCase.complexity;
+                const complexTypes = ['Complex', 'Very Complex'];
+                const simpleTypes = ['Basic', 'Very Simple', 'Simple'];
+
+                if (level <= 7 && complexTypes.includes(complexity)) return 1;
+                if (level === 9 && complexity === 'Medium') return 1;
+                if (level >= 10 && simpleTypes.includes(complexity)) return 1;
+                if (level <= 7 && !complexTypes.includes(complexity)) return 2;
+                if (level === 9 && simpleTypes.includes(complexity)) return 2;
+                if (level === 9 && complexTypes.includes(complexity)) return 3;
+                if (level >= 10 && complexity === 'Medium') return 3;
+                if (level >= 10 && complexTypes.includes(complexity)) return 4;
+                return 5;
+            };
+
+            // --- EVENT LISTENERS ---
+            generateBtn.addEventListener('click', generateTimeline);
+            resetBtn.addEventListener('click', resetApp);
+            configFile.addEventListener('change', handleFileUpload);
+            exportCsvBtn.addEventListener('click', exportTimelineToCSV);
+            exportExcelBtn.addEventListener('click', exportTimelineToExcel);
+            expandGanttBtn.addEventListener('click', toggleGanttSize);
+            assignerCloseBtn.addEventListener('click', () => manualAssigner.style.display = 'none');
+            assignerSearch.addEventListener('input', filterAssignerList);
+            document.addEventListener('click', (e) => { // Close modals if clicking outside
+                if (!manualAssigner.contains(e.target) && !e.target.closest('.reassign-trigger') && !e.target.closest('.add-task-btn')) {
+                    manualAssigner.style.display = 'none';
+                }
+            });
+            
+            // --- TABBING LOGIC ---
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tab = button.dataset.tab;
+
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('active', 'border-purple-500', 'text-purple-600');
+                        btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                    });
+
+                    button.classList.add('active', 'border-purple-500', 'text-purple-600');
+                    button.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                    
+                    tabContents.forEach(content => {
+                        if (content.id === `tab-content-${tab}`) {
+                            content.classList.remove('hidden');
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+
+            function showNotification(message, isError = true) {
+                const notificationArea = document.getElementById('notification-area');
+                const notificationContent = document.getElementById('notification-content');
+                
+                notificationContent.textContent = message;
+                notificationContent.className = `text-white font-bold rounded-lg border-2 shadow-lg p-4 max-w-sm ${isError ? 'bg-red-500 border-red-600' : 'bg-green-500 border-green-600'}`;
+                
+                notificationArea.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    notificationArea.classList.add('hidden');
+                }, 5000);
+            }
+
+            function toggleGanttSize() {
+                const container = document.getElementById('gantt-chart-container');
+                container.classList.toggle('gantt-expanded');
+                expandGanttBtn.textContent = container.classList.contains('gantt-expanded') ? 'Collapse' : 'Expand';
+            }
+
+            function handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        const requiredSheets = ['usecases', 'developers', 'complexity'];
+                        const missingSheets = requiredSheets.filter(sheetName => !workbook.SheetNames.includes(sheetName));
+
+                        if (missingSheets.length > 0) {
+                            showNotification(`Error: Missing required sheets in Excel file: ${missingSheets.join(', ')}`);
+                            resetApp();
+                            return;
+                        }
+
+                        rawParsedData = {
+                            usecases: XLSX.utils.sheet_to_json(workbook.Sheets['usecases']),
+                            developers: XLSX.utils.sheet_to_json(workbook.Sheets['developers']),
+                            complexity: XLSX.utils.sheet_to_json(workbook.Sheets['complexity']),
+                        };
+
+                        renderInitialFileSummary();
+                        generateBtn.disabled = false;
+                        showNotification('File processed successfully! Ready to generate timeline.', false);
+                    } catch (error) {
+                        showNotification('Error parsing Excel file. Please ensure it is a valid .xlsx file.');
+                        console.error("File Parse Error:", error);
+                        resetApp();
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+            
+            function resetApp() {
+                rawParsedData = null;
+                generatedTimelineData = [];
+                unassignedBacklogData = [];
+                generateBtn.disabled = true;
+                
+                document.getElementById('file-summary').classList.add('hidden');
+                outputPanel.classList.add('hidden');
+                initialMessage.classList.remove('hidden');
+                
+                configFile.value = '';
+                setDefaultDates();
+                
+                document.getElementById('complexity-summary').innerHTML = '';
+                document.getElementById('resource-summary').innerHTML = '';
+                
+                showNotification("Application has been reset.", false);
+            }
+
+            function renderInitialFileSummary() {
+                if (!rawParsedData) return;
+                displayFileSummary(rawParsedData);
+                document.getElementById('file-summary').classList.remove('hidden');
+            }
+            
+            function displayFileSummary(data, workloadData = null) {
+                const complexitySummaryDiv = document.getElementById('complexity-summary');
+                complexitySummaryDiv.innerHTML = `<div class="grid grid-cols-4 gap-2 font-medium text-gray-500"><div>Complexity</div><div>Dev</div><div>UAT</div><div>Deploy</div></div>`;
+                data.complexity.forEach(c => {
+                    const devDays = parseFloat(c.Dev) || 0;
+                    const uatDays = parseFloat(c.UAT) || 0;
+                    const deployDays = parseFloat(c.Deploy) || 0;
+                    
+                    complexitySummaryDiv.innerHTML += `
+                        <div class="grid grid-cols-4 gap-2 items-center">
+                            <label class="font-medium">${c.complexity}</label>
+                            <span>${devDays.toFixed(2)}</span>
+                            <span>${uatDays.toFixed(2)}</span>
+                            <span>${deployDays.toFixed(2)}</span>
+                        </div>`;
+                });
+
+                const resourceSummaryDiv = document.getElementById('resource-summary');
+                resourceSummaryDiv.innerHTML = '';
+                
+                const developerMap = new Map();
+                data.developers.forEach(dev => {
+                    const name = String(dev.DeveloperName || '').trim();
+                    if (!name) return; 
+                    const lowerCaseName = name.toLowerCase();
+
+                    if (!developerMap.has(lowerCaseName)) {
+                        developerMap.set(lowerCaseName, {
+                            displayName: name,
+                            FTE: dev.FTE,
+                            Level: dev.Level,
+                            Skills: new Set()
+                        });
+                    }
+                    if (dev.Skills) {
+                       developerMap.get(lowerCaseName).Skills.add(dev.Skills);
+                    }
+                });
+
+                if(!workloadData) { // Only run validation on initial load
+                    const developerNames = Array.from(developerMap.keys());
+                    const missingDevelopers = new Set();
+                    data.usecases.forEach(uc => {
+                        const assignedTo = String(uc.AssignedTo || '').trim().toLowerCase();
+                        if (assignedTo && assignedTo !== 'unassign') {
+                            if (!developerNames.includes(assignedTo)) {
+                                missingDevelopers.add(uc.AssignedTo);
+                            }
+                        }
+                    });
+
+                    if (missingDevelopers.size > 0) {
+                        showNotification(`Warning: These developers are assigned tasks but are not in the 'developers' sheet: ${Array.from(missingDevelopers).join(', ')}. They will be ignored.`, true);
+                    }
+                }
+
+                developerMap.forEach((data) => {
+                    const assignedUsecases = rawParsedData.usecases.filter(uc => uc.AssignedTo && uc.AssignedTo.toLowerCase() === data.displayName.toLowerCase());
+                    const ucSummary = assignedUsecases.reduce((acc, uc) => {
+                        acc[uc.Complexity] = (acc[uc.Complexity] || 0) + 1;
+                        return acc;
+                    }, {});
+                    
+                    let summaryHtml = Object.entries(ucSummary).map(([comp, count]) => `${count} ${comp}`).join(', ');
+                    if (!summaryHtml) summaryHtml = 'No assigned use cases.';
+                    
+                    let skillsHtml = Array.from(data.Skills).join(', ');
+                    if (!skillsHtml) skillsHtml = 'No skills listed.';
+                    
+                    let workloadHtml = '';
+                    const resourceWorkload = workloadData ? workloadData.find(r => r.name === data.displayName) : null;
+                    if (resourceWorkload) {
+                        const { workload, isOverdue } = resourceWorkload;
+                        let color = 'text-green-600';
+                        let status = 'Within Capacity';
+                        if (isOverdue) {
+                            color = 'text-red-500 font-bold';
+                            status = 'Past Deadline!';
+                        } else if (workload > 100) {
+                            color = 'text-red-500';
+                            status = 'Stretched!';
+                        } else if (workload >= 90) {
+                            color = 'text-orange-500';
+                            status = 'At Capacity';
+                        }
+                        workloadHtml = `<p class="text-sm font-medium ${color}">Workload: ${workload.toFixed(0)}% (${status})</p>`;
+                    }
+
+
+                    resourceSummaryDiv.innerHTML += `
+                        <div class="p-3 border rounded-md bg-white shadow-sm">
+                            <p class="font-semibold text-gray-800">${data.displayName}</p>
+                            <p class="text-xs text-gray-500">FTE: ${data.FTE || 1} | Level: ${data.Level || 'N/A'} | Skills: ${skillsHtml}</p>
+                            <p class="text-sm mt-1"><strong>Assignments:</strong> ${summaryHtml}</p>
+                            ${workloadHtml}
+                        </div>
+                    `;
+                });
+            }
+
+
+            // ** Core Logic: Timeline Generation **
+            function generateTimeline() {
+                if (!rawParsedData) {
+                    showNotification("Please upload and process a configuration file first.");
+                    return;
+                }
+
+                complexityConfig = {};
+                rawParsedData.complexity.forEach(c => {
+                    complexityConfig[c.complexity] = {
+                        dev: parseFloat(c.Dev) || 0,
+                        uat: parseFloat(c.UAT) || 0,
+                        deploy: parseFloat(c.Deploy) || 0,
+                    };
+                });
+
+                const developerMap = new Map();
+                rawParsedData.developers.forEach(dev => {
+                    const name = String(dev.DeveloperName || '').trim();
+                    if (!name) return;
+                    const lowerCaseName = name.toLowerCase();
+                    if (!developerMap.has(lowerCaseName)) {
+                        developerMap.set(lowerCaseName, {
+                            displayName: name,
+                            FTE: dev.FTE,
+                            Level: dev.Level,
+                            Skills: new Set()
+                        });
+                    }
+                    if (dev.Skills) {
+                       developerMap.get(lowerCaseName).Skills.add(dev.Skills);
+                    }
+                });
+                const uniqueDevelopers = Array.from(developerMap.values());
+                const validDeveloperNames = Array.from(uniqueDevelopers.map(d => d.displayName.toLowerCase()));
+
+                const startDate = dayjs(document.getElementById('startDate').value);
+                const endDate = dayjs(document.getElementById('endDate').value);
+                
+                if (!startDate.isValid() || !endDate.isValid() || endDate.isBefore(startDate)) {
+                    showNotification("Please set a valid start and end date.");
+                    return;
+                }
+                
+                const resources = uniqueDevelopers.map(dev => {
+                    const assignedUsecases = rawParsedData.usecases
+                        .filter(uc => uc.AssignedTo && String(uc.AssignedTo).trim().toLowerCase() === dev.displayName.trim().toLowerCase())
+                        .map(uc => ({...uc, id: uc.UC_ID, complexity: uc.Complexity, isNew: false }));
+                    
+                    return {
+                        name: dev.displayName,
+                        fte: (parseFloat(dev.FTE) || 1),
+                        skills: Array.from(dev.Skills).map(s => String(s).toLowerCase().trim()),
+                        level: dev.Level || 12,
+                        hoursPerDay: 8,
+                        useCases: assignedUsecases,
+                        timeline: [],
+                        nextAvailableDate: startDate,
+                        assignedEffort: 0
+                    };
+                });
+                
+                let newUseCases = rawParsedData.usecases
+                    .filter(uc => {
+                        const assignedTo = String(uc.AssignedTo || '').trim().toLowerCase();
+                        return !assignedTo || assignedTo === 'unassign' || !validDeveloperNames.includes(assignedTo);
+                     })
+                    .map(uc => ({...uc, id: uc.UC_ID, complexity: uc.Complexity, isNew: true }));
+                
+                const workingDaysInPeriod = getWorkingDays(startDate, endDate);
+                
+                resources.forEach(res => {
+                    res.availableWorkHours = workingDaysInPeriod * res.hoursPerDay * res.fte;
+                });
+
+                const scheduleUseCase = (res, uc, checkCapacity = true) => {
+                    const effort = complexityConfig[uc.complexity];
+                    if (!effort) return false;
+                    
+                    const devCalendarDays = Math.ceil((parseFloat(effort.dev) || 0) / res.fte);
+                    const uatCalendarDays = Math.ceil((parseFloat(effort.uat) || 0) / res.fte);
+                    const deployCalendarDays = Math.ceil((parseFloat(effort.deploy) || 0) / res.fte);
+
+                    const devStart = res.nextAvailableDate;
+                    const devEnd = addWorkingDays(devStart, devCalendarDays);
+                    const uatStart = devEnd;
+                    const uatEnd = addWorkingDays(uatStart, uatCalendarDays);
+                    const deployStart = uatEnd;
+                    const deployEnd = addWorkingDays(deployStart, deployCalendarDays);
+                    
+                    const totalEffortHours = (parseFloat(effort.dev) + parseFloat(effort.uat) + parseFloat(effort.deploy)) * res.hoursPerDay;
+                    
+                    if (checkCapacity) {
+                        if(deployEnd.isAfter(endDate)) return false; 
+                        if (res.assignedEffort + totalEffortHours > res.availableWorkHours) return false;
+                    }
+                    
+                    res.nextAvailableDate = devEnd;
+                    res.assignedEffort += totalEffortHours;
+                    res.timeline.push({ ...uc, devStart, devEnd, uatStart, uatEnd, deployStart, deployEnd });
+                    return true;
+                };
+                
+                // Pass 1: Schedule all pre-assigned tasks, ignoring capacity checks for this step
+                resources.forEach(res => {
+                    res.useCases.sort((a,b) => getPriorityValue(a) - getPriorityValue(b)).forEach(uc => scheduleUseCase(res, uc, false));
+                });
+                
+                // Pass 2: Schedule unassigned tasks from the backlog, now respecting capacity
+                const groupedTasks = newUseCases.reduce((acc, uc) => {
+                    const priority = getPriorityValue(uc);
+                    if (!acc[priority]) acc[priority] = [];
+                    acc[priority].push(uc);
+                    return acc;
+                }, {});
+
+                const priorityOrder = Object.keys(groupedTasks).sort((a, b) => a - b);
+                
+                let finalUnassignedBacklog = [];
+
+                for (const priority of priorityOrder) {
+                    let tasksToAssignInGroup = groupedTasks[priority];
+                    let assignedSomethingInThisPriority = true;
+
+                    while (tasksToAssignInGroup.length > 0 && assignedSomethingInThisPriority) {
+                        assignedSomethingInThisPriority = false;
+                        let remainingForNextPass = [];
+
+                        tasksToAssignInGroup.forEach(uc => {
+                            const ucSkillsStr = String(uc.Skills || '');
+                            const requiredSkills = ucSkillsStr.match(/[a-zA-Z]+/g)?.map(s => s.toLowerCase().trim()) || [];
+
+                            const skilledAndAvailableResources = resources
+                                .filter(r => {
+                                    const hasCapacity = r.assignedEffort < r.availableWorkHours;
+                                    if (!hasCapacity) return false;
+                                    if (requiredSkills.length === 0) return true;
+                                    return requiredSkills.every(reqSkill => r.skills.includes(reqSkill));
+                                })
+                                .sort((a, b) => {
+                                    const scoreA = getSuitabilityScore(a, uc);
+                                    const scoreB = getSuitabilityScore(b, uc);
+                                    if (scoreA !== scoreB) return scoreA - scoreB;
+                                    return a.nextAvailableDate.diff(b.nextAvailableDate);
+                                });
+
+                            if (skilledAndAvailableResources.length > 0) {
+                                const resourceToAssign = skilledAndAvailableResources[0];
+                                if (scheduleUseCase(resourceToAssign, uc, true)) {
+                                    assignedSomethingInThisPriority = true; 
+                                } else {
+                                    remainingForNextPass.push(uc); 
+                                }
+                            } else {
+                                remainingForNextPass.push(uc); 
+                            }
+                        });
+                        tasksToAssignInGroup = remainingForNextPass;
+                    }
+                    finalUnassignedBacklog.push(...tasksToAssignInGroup);
+                }
+                
+                resources.forEach(res => {
+                    res.workload = res.availableWorkHours > 0 ? (res.assignedEffort / res.availableWorkHours) * 100 : 0;
+                    const lastTask = res.timeline.reduce((latest, current) => latest.deployEnd.isAfter(current.deployEnd) ? latest : current, { deployEnd: startDate });
+                    res.isOverdue = lastTask.deployEnd.isAfter(endDate);
+                });
+                
+                generatedTimelineData = resources;
+                unassignedBacklogData = finalUnassignedBacklog;
+                
+                renderAllOutputs();
+            }
+
+            // --- Manual Assignment Functions ---
+            function openAssignerModal(mode, event) {
+                 const target = event.currentTarget;
+                 const resourceName = target.dataset.resourceName;
+                 document.getElementById('assigner-title').textContent = mode === 'add' ? `Add task for ${resourceName}` : 'Re-assign Task';
+
+                 currentAssignerTarget = { mode, resourceName, element: target };
+                 if (mode === 'reassign') {
+                     currentAssignerTarget.ucId = target.dataset.ucId;
+                 }
+                 
+                 const rect = target.getBoundingClientRect();
+                 manualAssigner.style.top = `${window.scrollY + rect.bottom}px`;
+                 manualAssigner.style.left = `${window.scrollX + rect.left}px`;
+                 manualAssigner.style.display = 'block';
+
+                 populateAssignerList();
+                 assignerSearch.value = '';
+                 assignerSearch.focus();
+            }
+
+            function populateAssignerList(filter = '') {
+                const listDiv = document.getElementById('assigner-list');
+                listDiv.innerHTML = '';
+                const { resourceName } = currentAssignerTarget;
+                const resource = generatedTimelineData.find(r => r.name === resourceName);
+                if (!resource) return;
+
+                const filteredBacklog = unassignedBacklogData
+                    .filter(uc => uc.complexity && complexityConfig[uc.complexity]) // Ensure task has a valid complexity
+                    .filter(uc => uc.id.toLowerCase().includes(filter.toLowerCase()))
+                    .sort((a,b) => getSuitabilityScore(resource, a) - getSuitabilityScore(resource, b));
+
+                if (filteredBacklog.length === 0) {
+                    listDiv.innerHTML = `<div class="p-2 text-sm text-gray-500 italic">No matching tasks found.</div>`;
+                    return;
+                }
+
+                filteredBacklog.forEach(uc => {
+                    const item = document.createElement('div');
+                    item.className = 'p-2 hover:bg-purple-100 cursor-pointer rounded-md text-sm border-b';
+                    item.dataset.ucId = uc.id;
+                    
+                    const priorityText = uc.Priority || 'N/A';
+                    const skillsText = uc.Skills || 'None';
+
+                    item.innerHTML = `
+                        <div class="font-semibold text-gray-800">${uc.id} (${uc.complexity})</div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            <span><strong>Prio:</strong> ${priorityText}</span> | <span><strong>Skills:</strong> ${skillsText}</span>
+                        </div>
+                    `;
+
+                    item.addEventListener('click', handleManualAssignment);
+                    listDiv.appendChild(item);
+                });
+            }
+            
+            function filterAssignerList() {
+                populateAssignerList(assignerSearch.value);
+            }
+
+            function handleManualAssignment(event) {
+                const newUcId = event.currentTarget.dataset.ucId;
+                const { mode, resourceName, ucId: oldUcId } = currentAssignerTarget;
+
+                const resource = generatedTimelineData.find(r => r.name === resourceName);
+                if (!resource) return;
+
+                const newUcIndex = unassignedBacklogData.findIndex(uc => uc.id === newUcId);
+                const newTask = unassignedBacklogData[newUcIndex];
+
+                if (mode === 'reassign') {
+                    const taskIndex = resource.timeline.findIndex(t => t.id === oldUcId);
+                    const oldTask = resource.timeline[taskIndex];
+                    unassignedBacklogData.splice(newUcIndex, 1, oldTask);
+                    resource.timeline.splice(taskIndex, 1, newTask);
+                } else { // mode === 'add'
+                    unassignedBacklogData.splice(newUcIndex, 1);
+                    resource.timeline.push(newTask);
+                }
+
+                recalculateResourceTimeline(resource);
+                renderAllOutputs();
+                manualAssigner.style.display = 'none';
+            }
+            
+            function handleRemoveTask(event) {
+                const { resourceName, ucId } = event.currentTarget.dataset;
+
+                const resource = generatedTimelineData.find(r => r.name === resourceName);
+                if (!resource) return;
+
+                const taskIndex = resource.timeline.findIndex(t => t.id === ucId);
+                if (taskIndex === -1) return;
+
+                const [removedTask] = resource.timeline.splice(taskIndex, 1);
+                unassignedBacklogData.push(removedTask);
+
+                recalculateResourceTimeline(resource);
+                renderAllOutputs();
+            }
+
+            function handleDateChange(event) {
+                const { resourceName, ucId } = event.currentTarget.dataset;
+                const newStartDate = event.currentTarget.value;
+                const resource = generatedTimelineData.find(r => r.name === resourceName);
+                if (!resource) return;
+                const task = resource.timeline.find(t => t.id === ucId);
+                if (!task) return;
+                
+                task.devStart = dayjs(newStartDate);
+                recalculateResourceTimeline(resource);
+                renderAllOutputs();
+            }
+
+            function recalculateResourceTimeline(resource) {
+                const startDate = dayjs(document.getElementById('startDate').value);
+                const endDate = dayjs(document.getElementById('endDate').value);
+                
+                resource.assignedEffort = 0;
+                
+                const tasksToReschedule = [...resource.timeline];
+                
+                // Robustly sort tasks, handling those with and without pre-defined start dates
+                tasksToReschedule.sort((a, b) => {
+                    const aHasDate = a.devStart && a.devStart.isValid();
+                    const bHasDate = b.devStart && b.devStart.isValid();
+
+                    if (aHasDate && !bHasDate) return -1; // Tasks with dates come first
+                    if (!aHasDate && bHasDate) return 1;  // New tasks go after
+                    if (!aHasDate && !bHasDate) return getPriorityValue(a) - getPriorityValue(b); // Sort new tasks by priority
+                    
+                    const dateDiff = a.devStart.diff(b.devStart);
+                    if (dateDiff !== 0) return dateDiff;
+                    return getPriorityValue(a) - getPriorityValue(b); // If dates are same, sort by priority
+                });
+
+                // This new variable will track the end of the last DEV phase for auto-scheduling.
+                let autoScheduleStartDate = startDate;
+                const processedTasks = [];
+
+                tasksToReschedule.forEach(uc => {
+                     const effort = complexityConfig[uc.complexity];
+                     if (!effort) {
+                         console.error(`Complexity configuration for "${uc.complexity}" not found. Skipping task ${uc.id}.`);
+                         return; // Skip task if its complexity is not defined
+                     }
+                     const devCalendarDays = Math.ceil((parseFloat(effort.dev) || 0) / resource.fte);
+                     const uatCalendarDays = Math.ceil((parseFloat(effort.uat) || 0) / resource.fte);
+                     const deployCalendarDays = Math.ceil((parseFloat(effort.deploy) || 0) / resource.fte);
+                     
+                     let devStart;
+                     // If a task has a user-defined start date, we use it.
+                     // Otherwise, we schedule it based on the end of the last known development phase.
+                     if (uc.devStart && uc.devStart.isValid()) {
+                         devStart = uc.devStart;
+                     } else {
+                         devStart = autoScheduleStartDate;
+                     }
+                     
+                     const devEnd = addWorkingDays(devStart, devCalendarDays);
+                     // UAT and Deploy are always sequential to their OWN dev phase.
+                     const uatStart = devEnd;
+                     const uatEnd = addWorkingDays(uatStart, uatCalendarDays);
+                     const deployStart = uatEnd;
+                     const deployEnd = addWorkingDays(deployStart, deployCalendarDays);
+                     const totalEffortHours = (parseFloat(effort.dev) + parseFloat(effort.uat) + parseFloat(effort.deploy)) * resource.hoursPerDay;
+                     
+                     // The start date for the *next* auto-scheduled task should be after the dev phase of the current task ends.
+                     // We take the latest devEnd date to prevent auto-scheduled tasks from overlapping with manual ones.
+                     autoScheduleStartDate = dayjs.max(autoScheduleStartDate, devEnd);
+
+                     resource.assignedEffort += totalEffortHours;
+                     processedTasks.push({ ...uc, devStart, devEnd, uatStart, uatEnd, deployStart, deployEnd });
+                });
+
+                resource.timeline = processedTasks;
+
+                const workingDaysInPeriod = getWorkingDays(startDate, endDate);
+                resource.availableWorkHours = workingDaysInPeriod * resource.hoursPerDay * resource.fte;
+                resource.workload = resource.availableWorkHours > 0 ? (resource.assignedEffort / resource.availableWorkHours) * 100 : 0;
+                
+                const lastTask = resource.timeline.length > 0
+                    ? resource.timeline.reduce((latest, current) => latest.deployEnd.isAfter(current.deployEnd) ? latest : current)
+                    : { deployEnd: startDate };
+
+                resource.isOverdue = lastTask.deployEnd.isAfter(endDate);
+            }
+
+
+            // ** Rendering Functions **
+            function renderAllOutputs() {
+                const startDate = dayjs(document.getElementById('startDate').value);
+                const endDate = dayjs(document.getElementById('endDate').value);
+                
+                displayFileSummary(rawParsedData, generatedTimelineData);
+                renderTimelineTable(generatedTimelineData);
+                renderGanttChart(generatedTimelineData, startDate, endDate);
+                renderDeveloperSummaryTable(generatedTimelineData);
+                renderBacklogTable(unassignedBacklogData);
+                renderExecutiveSummary(generatedTimelineData, unassignedBacklogData);
+                
+                initialMessage.classList.add('hidden');
+                outputPanel.classList.remove('hidden');
+            }
+
+            function renderBacklogTable(backlog) {
+                const tableBody = document.getElementById('backlog-table-body');
+                tableBody.innerHTML = '';
+                 if (backlog.length === 0) {
+                     const row = tableBody.insertRow();
+                     row.innerHTML = `<td colspan="4" class="px-6 py-4 text-gray-500 italic text-center">All use cases have been assigned.</td>`;
+                } else {
+                    backlog.sort((a,b) => getPriorityValue(a) - getPriorityValue(b)).forEach(uc => {
+                        const row = tableBody.insertRow();
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${uc.id || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${uc.Priority || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${uc.Skills || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${uc.complexity || 'N/A'}</td>
+                        `;
+                    });
+                }
+            }
+
+            function renderTimelineTable(resources) {
+                const tableBody = document.getElementById('timeline-table-body');
+                tableBody.innerHTML = '';
+                resources.forEach(res => {
+                    let workloadHtml = '';
+                    if (res.workload !== undefined) {
+                        const { workload, isOverdue } = res;
+                        let color = 'text-green-600';
+                        let status = 'Within Capacity';
+                        if (isOverdue) { color = 'text-red-500 font-bold'; status = 'Past Deadline!';}
+                        else if (workload > 100) { color = 'text-red-500'; status = 'Stretched!'; } 
+                        else if (workload >= 90) { color = 'text-orange-500'; status = 'At Capacity';}
+                        workloadHtml = `<span class="ml-2 text-xs font-semibold ${color}">(${status})</span>`;
+                    }
+
+                    if (res.timeline.length === 0) {
+                       const row = tableBody.insertRow();
+                       row.innerHTML = `<td class="px-6 py-4 whitespace-nowrap font-medium">${res.name} ${workloadHtml}</td><td colspan="7" class="px-6 py-4 text-gray-500 italic">No use cases assigned.</td>`;
+                    } else {
+                        res.timeline.sort((a,b) => a.devStart.diff(b.devStart)).forEach((uc, index) => {
+                            const row = tableBody.insertRow();
+                            if (uc.isNew) row.classList.add('highlight-new');
+                            
+                            const resourceCell = row.insertCell();
+                            resourceCell.className = "px-6 py-4 whitespace-nowrap font-medium text-gray-900 align-top";
+                            if (index === 0) {
+                                resourceCell.innerHTML = res.name + workloadHtml;
+                            }
+
+                            const ucIdCell = row.insertCell();
+                            ucIdCell.className = "px-6 py-4 whitespace-nowrap";
+                            let ucIdContent = '';
+
+                            if (uc.isNew) {
+                                ucIdContent += `<button class="reassign-trigger underline text-purple-600 hover:text-purple-800" data-resource-name="${res.name}" data-uc-id="${uc.id}">${uc.id}</button>`;
+                                ucIdContent += `<button class="remove-task-btn text-red-500 hover:text-red-700 font-bold ml-2" data-resource-name="${res.name}" data-uc-id="${uc.id}" title="Remove this task">&times;</button>`;
+                            } else {
+                                ucIdContent += uc.id;
+                            }
+                            ucIdCell.innerHTML = `<div class="flex items-center">${ucIdContent}</div>`;
+                            
+                            row.insertCell().outerHTML = `<td class="px-6 py-4 whitespace-nowrap">${uc.Priority || 'N/A'}</td>`;
+                            row.insertCell().outerHTML = `<td class="px-6 py-4 whitespace-nowrap">${uc.complexity}</td>`;
+                            
+                            const devStartCell = row.insertCell();
+                            devStartCell.className = "px-6 py-4 whitespace-nowrap text-sm text-gray-500";
+                            devStartCell.innerHTML = `
+                                <div class="flex items-center space-x-2">
+                                    <span>${uc.devStart.format('YYYY-MM-DD')}</span>
+                                    <input type="date" class="edit-date-btn hidden w-32" data-resource-name="${res.name}" data-uc-id="${uc.id}" value="${uc.devStart.format('YYYY-MM-DD')}">
+                                    <button class="edit-date-trigger text-purple-600 hover:text-purple-800" title="Edit Start Date">&#9998;</button>
+                                </div>
+                            `;
+
+                            row.insertCell().outerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${uc.devStart.format('YYYY-MM-DD')} &rarr; ${uc.devEnd.format('YYYY-MM-DD')}</td>`;
+                            row.insertCell().outerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${uc.uatStart.format('YYYY-MM-DD')} &rarr; ${uc.uatEnd.format('YYYY-MM-DD')}</td>`;
+                            row.insertCell().outerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${uc.deployStart.format('YYYY-MM-DD')} &rarr; ${uc.deployEnd.format('YYYY-MM-DD')}</td>`;
+                        });
+                    }
+
+                     const addRow = tableBody.insertRow();
+                     addRow.innerHTML = `<td class="px-6 py-2" colspan="8"><button class="add-task-btn text-purple-600 hover:text-purple-800 text-sm font-semibold" data-resource-name="${res.name}">+ Add Task</button></td>`;
+
+                });
+                
+                document.querySelectorAll('.reassign-trigger').forEach(btn => btn.addEventListener('click', (e) => openAssignerModal('reassign', e)));
+                document.querySelectorAll('.add-task-btn').forEach(btn => btn.addEventListener('click', (e) => openAssignerModal('add', e)));
+                document.querySelectorAll('.remove-task-btn').forEach(btn => btn.addEventListener('click', handleRemoveTask));
+                document.querySelectorAll('.edit-date-trigger').forEach(btn => btn.addEventListener('click', (e) => {
+                    const parent = e.currentTarget.parentElement;
+                    parent.querySelector('span').classList.add('hidden');
+                    e.currentTarget.classList.add('hidden');
+                    const input = parent.querySelector('input');
+                    input.classList.remove('hidden');
+                    input.focus();
+                }));
+                document.querySelectorAll('.edit-date-btn').forEach(input => {
+                    input.addEventListener('change', handleDateChange);
+                    input.addEventListener('blur', (e) => { // Revert if they click away without changing
+                        const parent = e.currentTarget.parentElement;
+                        parent.querySelector('span').classList.remove('hidden');
+                        parent.querySelector('.edit-date-trigger').classList.remove('hidden');
+                        e.currentTarget.classList.add('hidden');
+                    });
+                });
+            }
+
+            function renderGanttChart(resources, projectStart, projectEnd) {
+                const ganttContainer = document.getElementById('gantt-chart');
+                ganttContainer.innerHTML = '';
+                const totalDays = projectEnd.diff(projectStart, 'day') + 1;
+
+                const headerDiv = document.createElement('div');
+                headerDiv.className = "flex sticky top-0 bg-white z-10";
+                headerDiv.style.marginLeft = '150px'; 
+                const headerContent = document.createElement('div');
+                headerContent.className = 'relative w-full h-12 flex items-end border-b-2';
+
+                let currentMonth = null;
+                let currentDate = projectStart;
+                while(currentDate.isBefore(projectEnd) || currentDate.isSame(projectEnd)) {
+                    const dayOffset = currentDate.diff(projectStart, 'day');
+                    const leftPercentage = (dayOffset / totalDays) * 100;
+                     
+                    const monthYear = currentDate.format('MMM YYYY');
+                    if(monthYear !== currentMonth) {
+                       currentMonth = monthYear;
+                       const monthEl = document.createElement('div');
+                       monthEl.className = 'absolute text-sm font-semibold text-gray-600';
+                       monthEl.style.left = `${leftPercentage}%`;
+                       monthEl.style.bottom = '24px';
+                       monthEl.textContent = currentMonth;
+                       headerContent.appendChild(monthEl);
+                    }
+                    
+                    if (currentDate.isoWeekday() === 5) { // Friday
+                         const dayEl = document.createElement('div');
+                         dayEl.className = 'absolute text-xs text-gray-400';
+                         dayEl.style.left = `${leftPercentage}%`;
+                         dayEl.style.transform = 'translateX(-50%)';
+                         dayEl.innerHTML = `<span>${currentDate.format('DD')}</span>`;
+                         headerContent.appendChild(dayEl);
+                    }
+                    currentDate = currentDate.add(1, 'day');
+                }
+
+                headerDiv.appendChild(headerContent);
+                ganttContainer.appendChild(headerDiv);
+
+                resources.forEach(res => {
+                    const resourceHeaderDiv = document.createElement('div');
+                    resourceHeaderDiv.className = 'flex items-center mt-2';
+                    resourceHeaderDiv.innerHTML = `
+                        <div class="w-[150px] text-sm font-bold text-gray-800 pr-4 truncate flex-shrink-0">${res.name}</div>
+                        <div class="w-full border-t"></div>
+                    `;
+                    ganttContainer.appendChild(resourceHeaderDiv);
+
+                    if (res.timeline.length === 0) {
+                        const noUcRow = document.createElement('div');
+                        noUcRow.className = 'flex items-center py-2 h-8';
+                        noUcRow.innerHTML = `<div class="w-[150px] pl-4 text-xs italic text-gray-500">No use cases</div><div class="w-full"></div>`;
+                        ganttContainer.appendChild(noUcRow);
+                        return;
+                    }
+
+                    res.timeline.sort((a,b) => a.devStart.diff(b.devStart)).forEach((uc) => {
+                         const ucRowDiv = document.createElement('div');
+                         ucRowDiv.className = 'flex items-center h-8';
+                         
+                         const ucNameDiv = document.createElement('div');
+                         ucNameDiv.className = 'w-[150px] text-xs text-gray-600 pl-4 truncate flex-shrink-0';
+                         ucNameDiv.textContent = uc.id;
+                         ucRowDiv.appendChild(ucNameDiv);
+
+                         const barsContainer = document.createElement('div');
+                         barsContainer.className = 'relative w-full h-full'; 
+
+                         const phases = [
+                            { start: uc.devStart, end: uc.devEnd, type: 'dev' },
+                            { start: uc.uatStart, end: uc.uatEnd, type: 'uat' },
+                            { start: uc.deployStart, end: uc.deployEnd, type: 'deploy' }
+                        ];
+
+                        phases.forEach(phase => {
+                            const startOffset = Math.max(0, phase.start.diff(projectStart, 'day'));
+                            const duration = phase.end.diff(phase.start, 'day') || 1; 
+                            if (startOffset > totalDays) return;
+
+                            const left = (startOffset / totalDays) * 100;
+                            const width = (duration / totalDays) * 100;
+
+                            const bar = document.createElement('div');
+                            bar.className = `gantt-bar`;
+                            if(phase.type === 'dev') bar.classList.add('gantt-bar-dev');
+                            if(phase.type === 'uat') bar.classList.add('gantt-bar-uat');
+                            if(phase.type === 'deploy') bar.classList.add('gantt-bar-deploy');
+                             if (uc.isNew) bar.classList.add('highlight-new-bar-effect');
+                            bar.style.left = `${left}%`;
+                            bar.style.width = `${width}%`;
+                            bar.style.top = `2px`;
+                            bar.title = `${uc.id} (${uc.complexity})\nPhase: ${phase.type.toUpperCase()}\nResource: ${res.name}\nDate: ${phase.start.format('YYYY-MM-DD')} - ${phase.end.format('YYYY-MM-DD')}`;
+                            
+                            barsContainer.appendChild(bar);
+                        });
+                        
+                        ucRowDiv.appendChild(barsContainer);
+                        ganttContainer.appendChild(ucRowDiv);
+                    });
+                });
+            }
+
+            function renderDeveloperSummaryTable(resources) {
+                const tableBody = document.getElementById('developer-summary-table-body');
+                tableBody.innerHTML = '';
+                resources.forEach(res => {
+                    const row = tableBody.insertRow();
+                    const capacityLeft = res.availableWorkHours - res.assignedEffort;
+                    let activeDates = "N/A";
+
+                    if (res.timeline.length > 0) {
+                        const firstTask = res.timeline.reduce((earliest, current) => earliest.devStart.isBefore(current.devStart) ? earliest : current);
+                        const lastTask = res.timeline.reduce((latest, current) => latest.deployEnd.isAfter(current.deployEnd) ? latest : current);
+                        activeDates = `${firstTask.devStart.format('YYYY-MM-DD')} -> ${lastTask.deployEnd.format('YYYY-MM-DD')}`;
+                    }
+
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${res.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${res.assignedEffort.toFixed(1)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${res.availableWorkHours.toFixed(1)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${activeDates}</td>
+                        <td class="px-6 py-4 whitespace-nowrap font-medium ${capacityLeft < 0 ? 'text-red-500' : 'text-green-600'}">${capacityLeft.toFixed(1)}</td>
+                    `;
+                })
+            }
+
+            function renderExecutiveSummary(resources, backlog) {
+                const container = document.getElementById('executive-summary');
+                const developerNames = resources.map(r => r.name.toLowerCase());
+                const totalUseCases = rawParsedData.usecases.filter(uc => {
+                    const assignedTo = String(uc.AssignedTo || '').trim().toLowerCase();
+                    return !assignedTo || assignedTo === 'unassign' || !developerNames.includes(assignedTo);
+                }).length;
+                const scheduledUseCases = totalUseCases - backlog.length;
+                
+                const totalAssignedEffort = resources.reduce((sum, res) => sum + res.assignedEffort, 0);
+                const totalAvailableHours = resources.reduce((sum, res) => sum + res.availableWorkHours, 0);
+                const teamUtilization = totalAvailableHours > 0 ? (totalAssignedEffort / totalAvailableHours) * 100 : 0;
+                
+                const stretchedDevelopers = resources.filter(r => r.workload > 100 || r.isOverdue).length;
+
+                container.innerHTML = `
+                    <div class="p-4 rounded-lg bg-slate-50">
+                        <p class="text-sm text-gray-500">Use Cases Scheduled</p>
+                        <p class="text-2xl font-bold text-purple-800">${scheduledUseCases} <span class="text-lg font-normal">of ${totalUseCases}</span></p>
+                    </div>
+                     <div class="p-4 rounded-lg bg-slate-50">
+                        <p class="text-sm text-gray-500">Overall Team Utilization</p>
+                        <p class="text-2xl font-bold text-purple-800">${teamUtilization.toFixed(0)}%</p>
+                    </div>
+                     <div class="p-4 rounded-lg bg-slate-50">
+                        <p class="text-sm text-gray-500">Stretched Resources</p>
+                        <p class="text-2xl font-bold ${stretchedDevelopers > 0 ? 'text-red-500' : 'text-purple-800'}">${stretchedDevelopers}</p>
+                    </div>
+                    <div class="p-4 rounded-lg bg-slate-50">
+                        <p class="text-sm text-gray-500">Tasks in Backlog</p>
+                        <p class="text-2xl font-bold text-purple-800">${backlog.length}</p>
+                    </div>
+                `;
+            }
+
+
+            // ** Date Helper Functions **
+            function addWorkingDays(startDate, daysToAdd) {
+                let currentDate = dayjs(startDate);
+                let addedDays = 0;
+                let days = Math.ceil(daysToAdd);
+                if (days <= 0) return currentDate;
+                while (addedDays < days) {
+                    currentDate = currentDate.add(1, 'day');
+                    if (currentDate.isoWeekday() !== 6 && currentDate.isoWeekday() !== 7) {
+                        addedDays++;
+                    }
+                }
+                return currentDate;
+            }
+            
+            function getWorkingDays(startDate, endDate) {
+                let count = 0;
+                let currentDate = dayjs(startDate);
+                while(currentDate.isBefore(endDate) || currentDate.isSame(endDate)) {
+                    if (currentDate.isoWeekday() !== 6 && currentDate.isoWeekday() !== 7) {
+                        count++;
+                    }
+                    currentDate = currentDate.add(1, 'day');
+                }
+                return count;
+            }
+
+            // ** File I/O Functions **
+
+            function exportTimelineToExcel() {
+                if (!generatedTimelineData || generatedTimelineData.length === 0) {
+                    showNotification("Please generate a timeline before exporting.");
+                    return;
+                }
+
+                const wb = XLSX.utils.book_new();
+
+                // 1. --- Create the new "Updated_Usecases" sheet ---
+                const scheduledTaskMap = new Map();
+                generatedTimelineData.forEach(res => {
+                    res.timeline.forEach(uc => {
+                        scheduledTaskMap.set(uc.id, { ...uc, resourceName: res.name });
+                    });
+                });
+
+                const updatedUsecasesData = [];
+                // Define headers dynamically from the first use case object if it exists, plus new ones.
+                const firstUc = rawParsedData.usecases[0] || {};
+                // Preserve original header order
+                const originalHeaders = Object.keys(firstUc);
+
+                const allHeaders = [
+                    ...originalHeaders,
+                    'AssignmentStatus', 'DevStart', 'DevEnd', 'UATStart', 'UATEnd', 'DeployStart', 'DeployEnd'
+                ];
+                // Filter out duplicates in case a timeline column already exists in the source
+                const finalHeaders = [...new Set(allHeaders)];
+                updatedUsecasesData.push(finalHeaders);
+
+                rawParsedData.usecases.forEach(originalUc => {
+                    const ucId = originalUc.UC_ID;
+                    const scheduledTask = scheduledTaskMap.get(ucId);
+                    
+                    let newRow = { ...originalUc };
+
+                    if (scheduledTask) {
+                        newRow.AssignedTo = scheduledTask.resourceName; // Update assignment
+                        newRow.AssignmentStatus = scheduledTask.isNew ? 'Newly Assigned' : 'Pre-Assigned';
+                        newRow.DevStart = scheduledTask.devStart.format('YYYY-MM-DD');
+                        newRow.DevEnd = scheduledTask.devEnd.format('YYYY-MM-DD');
+                        newRow.UATStart = scheduledTask.uatStart.format('YYYY-MM-DD');
+                        newRow.UATEnd = scheduledTask.uatEnd.format('YYYY-MM-DD');
+                        newRow.DeployStart = scheduledTask.deployStart.format('YYYY-MM-DD');
+                        newRow.DeployEnd = scheduledTask.deployEnd.format('YYYY-MM-DD');
+                    } else {
+                        newRow.AssignmentStatus = 'In Backlog';
+                        // Leave timeline fields blank by not setting them
+                    }
+                    
+                    // Ensure row data aligns with header order
+                    const rowData = finalHeaders.map(header => newRow[header] || '');
+                    updatedUsecasesData.push(rowData);
+                });
+                
+                const updatedUsecasesWs = XLSX.utils.aoa_to_sheet(updatedUsecasesData);
+                XLSX.utils.book_append_sheet(wb, updatedUsecasesWs, "Updated_Usecases");
+
+
+                // 2. --- Timeline Sheet (as before) ---
+                const timelineHeaders = ['Resource', 'UseCaseID', 'Priority', 'Complexity', 'IsNew', 'DevStart', 'DevEnd', 'UATStart', 'UATEnd', 'DeployStart', 'DeployEnd'];
+                const timelineData = [timelineHeaders];
+                generatedTimelineData.forEach(res => {
+                    res.timeline.forEach(uc => {
+                        timelineData.push([
+                            res.name, uc.id, uc.Priority, uc.complexity, uc.isNew,
+                            uc.devStart.format('YYYY-MM-DD'), uc.devEnd.format('YYYY-MM-DD'),
+                            uc.uatStart.format('YYYY-MM-DD'), uc.uatEnd.format('YYYY-MM-DD'),
+                            uc.deployStart.format('YYYY-MM-DD'), uc.deployEnd.format('YYYY-MM-DD')
+                        ]);
+                    });
+                });
+                const timelineWs = XLSX.utils.aoa_to_sheet(timelineData);
+                XLSX.utils.book_append_sheet(wb, timelineWs, "Timeline");
+
+                // 3. --- Backlog Sheet (as before) ---
+                const backlogHeaders = ['UseCaseID', 'Priority', 'Skills', 'Complexity'];
+                const backlogData = [backlogHeaders];
+                unassignedBacklogData.forEach(uc => {
+                    backlogData.push([uc.id, uc.Priority, uc.Skills, uc.complexity]);
+                });
+                const backlogWs = XLSX.utils.aoa_to_sheet(backlogData);
+                XLSX.utils.book_append_sheet(wb, backlogWs, "Backlog");
+
+                // 4. --- Gantt Data Sheet (as before) ---
+                const ganttHeaders = ['Resource', 'UseCaseID', 'Phase', 'StartDate', 'EndDate'];
+                const ganttData = [ganttHeaders];
+                generatedTimelineData.forEach(res => {
+                    res.timeline.forEach(uc => {
+                        ganttData.push([res.name, uc.id, 'Dev', uc.devStart.format('YYYY-MM-DD'), uc.devEnd.format('YYYY-MM-DD')]);
+                        ganttData.push([res.name, uc.id, 'UAT', uc.uatStart.format('YYYY-MM-DD'), uc.uatEnd.format('YYYY-MM-DD')]);
+                        ganttData.push([res.name, uc.id, 'Deploy', uc.deployStart.format('YYYY-MM-DD'), uc.deployEnd.format('YYYY-MM-DD')]);
+                    });
+                });
+                const ganttWs = XLSX.utils.aoa_to_sheet(ganttData);
+                XLSX.utils.book_append_sheet(wb, ganttWs, "Gantt_Data");
+
+                // 5. --- Developer Capacity Summary Sheet (Renamed) ---
+                const summaryHeaders = ['Developer', 'Total Work (Hrs)', 'Total Capacity (Hrs)', 'Active Start', 'Active End', 'Capacity Left (Hrs)'];
+                const summaryData = [summaryHeaders];
+                generatedTimelineData.forEach(res => {
+                    const capacityLeft = res.availableWorkHours - res.assignedEffort;
+                    let activeStart = "N/A", activeEnd = "N/A";
+                     if (res.timeline.length > 0) {
+                        const firstTask = res.timeline.reduce((earliest, current) => earliest.devStart.isBefore(current.devStart) ? earliest : current);
+                        const lastTask = res.timeline.reduce((latest, current) => latest.deployEnd.isAfter(current.deployEnd) ? latest : current);
+                        activeStart = firstTask.devStart.format('YYYY-MM-DD');
+                        activeEnd = lastTask.deployEnd.format('YYYY-MM-DD');
+                    }
+                    summaryData.push([
+                        res.name,
+                        res.assignedEffort.toFixed(1),
+                        res.availableWorkHours.toFixed(1),
+                        activeStart,
+                        activeEnd,
+                        capacityLeft.toFixed(1)
+                    ]);
+                });
+                const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+                XLSX.utils.book_append_sheet(wb, summaryWs, "Developer_Capacity_Summary");
+
+
+                XLSX.writeFile(wb, "Timeline_Export.xlsx");
+            }
+
+            function exportTimelineToCSV() {
+                if (!generatedTimelineData || generatedTimelineData.length === 0) {
+                    showNotification("Please generate a timeline before exporting.");
+                    return;
+                }
+                
+                const headers = ['Resource', 'UseCaseID', 'Priority', 'Complexity', 'IsNew', 'DevStart', 'DevEnd', 'UATStart', 'UATEnd', 'DeployStart', 'DeployEnd'];
+                const resources = generatedTimelineData;
+                
+                let csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + '\n';
+
+                resources.forEach(res => {
+                    if (res.timeline && Array.isArray(res.timeline)) {
+                        res.timeline.forEach(uc => {
+                            const row = [
+                                `"${res.name}"`,
+                                uc.id, uc.Priority, uc.complexity, uc.isNew,
+                                uc.devStart.format('YYYY-MM-DD'), uc.devEnd.format('YYYY-MM-DD'),
+                                uc.uatStart.format('YYYY-MM-DD'), uc.uatEnd.format('YYYY-MM-DD'),
+                                uc.deployStart.format('YYYY-MM-DD'), uc.deployEnd.format('YYYY-MM-DD')
+                            ].join(',');
+                            csvContent += row + '\n';
+                        });
+                    }
+                });
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "timeline_export.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            
+            function updateTemplateLink() {
+                const csvHeader = [
+                    '# This CSV demonstrates the data structure for your Excel file.',
+                    '# Please create an Excel file with three sheets: usecases, developers, and complexity.',
+                    '',
+                    '# --- Sheet: usecases ---',
+                    'UC_ID,Title,Priority,Status,AssignedTo,Skills,Complexity,Onshore?',
+                    'AT_NLWO_026,"Server Provisioning for TI290",Priority 1,In Progress,kristianne castillo,"RPA + Scripting",Complex,No',
+                    'AT_NLINC_509,"Access Request for BS200/B280",Priority 1,Deep-Dive Completed,c.n.pagibigan,"RPA + PowerShell",Medium,No',
+                    'AT_NLWO_031,"DNS Management regarding DNS for TI200",Priority 3,Deep-dive Completed,unassign,PowerShell,Simple,Yes',
+                    '',
+                    '# --- Sheet: developers ---',
+                    'DeveloperName,Skills,FTE,Level',
+                    'kristianne castillo,RPA,1,9',
+                    'c.n.pagibigan,RPA,1,12',
+                    'herbert.bernardo,Scripting,1,7',
+                    'herbert.bernardo,RPA,1,7',
+                    '',
+                    '# --- Sheet: complexity ---',
+                    'complexity,total in days,Dev,UAT,Deploy',
+                    'Basic,4,2.8,0.8,0.4',
+                    'Simple,10,7,2,1',
+                    'Medium,15,10.5,3,1.5',
+                    'Complex,25,17.5,5,2.5',
+                ];
+                const csvContent = csvHeader.join('\\n');
+                const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent);
+                downloadTemplateLink.setAttribute("href", dataStr);
+            }
+
+            // --- INITIALIZATION ---
+            setDefaultDates();
+            updateTemplateLink();
+        });
+    </script>
+</body>
+</html>
+
