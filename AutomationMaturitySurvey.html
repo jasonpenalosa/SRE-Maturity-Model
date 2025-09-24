@@ -105,13 +105,13 @@
 
         <main class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-8">
             <!-- Step Navigation -->
-            <div class="border-b border-gray-200 pb-5 mb-8">
+            <div id="step-nav-container" class="border-b border-gray-200 pb-5 mb-8">
                 <div id="step-indicator" class="flex items-center justify-between">
                     <!-- Step indicator will be populated by JS -->
                 </div>
             </div>
             
-            <div class="flex justify-end mb-4">
+            <div id="nav-buttons-container" class="flex justify-end mb-4">
                  <div class="flex gap-4">
                     <button id="back-button" class="bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition-colors">Back</button>
                     <button id="next-button" class="bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700 transition-colors shadow-md">Next</button>
@@ -120,9 +120,17 @@
 
 
             <!-- Tab Content -->
-            <div id="tab-content" class="mt-8">
+            <div id="tab-content">
+                <!-- Home Screen -->
+                <div id="home" class="tab-pane">
+                    <div class="text-center py-16">
+                        <h2 class="text-3xl font-bold text-slate-800 mb-8">Automation Maturity Assessment Survey</h2>
+                        <button id="begin-survey-button" class="bg-purple-600 text-white font-bold py-4 px-8 rounded-lg hover:bg-purple-700 transition-colors shadow-lg text-lg">Begin Survey</button>
+                    </div>
+                </div>
+
                 <!-- Executive Summary -->
-                <div id="summary" class="tab-pane">
+                <div id="summary" class="tab-pane hidden">
                     <h2 class="text-2xl font-semibold text-slate-800 mb-4">Executive Summary</h2>
                     <div class="space-y-4 text-slate-600 leading-relaxed">
                         <p>The Strategic Automation Ascendancy Framework is a comprehensive model designed to guide our organization's evolution from manual, reactive IT operations to a proactive, autonomous, and AI-driven state. By blending the aspirational goals of an agentic future with the concrete, measurable criteria from our current Automation Maturity Assessment, this framework provides a clear, actionable roadmap.</p>
@@ -518,6 +526,7 @@
         };
         
         const steps = [
+            { id: 'home', name: 'Home' },
             { id: 'summary', name: 'Executive Summary' },
             { id: 'responder-details', name: 'Responder Details' },
             { id: 'pillars', name: 'Core Pillars' },
@@ -542,7 +551,6 @@
             populateLevels();
             populateMatrix();
             populateStepIndicator();
-            setResponderDefaults();
             initializeDataStores();
             populateTowerSelection();
             renderSummarySliders();
@@ -811,6 +819,7 @@
         function attachEventListeners() {
             document.getElementById('back-button').addEventListener('click', () => navigateToStep(currentStepIndex - 1));
             document.getElementById('next-button').addEventListener('click', handleNextClick);
+            document.getElementById('begin-survey-button').addEventListener('click', () => navigateToStep(1));
             
             document.getElementById('select-all-towers').addEventListener('click', () => {
                 document.querySelectorAll('input[name="tower-selection"]').forEach(cb => cb.checked = true);
@@ -863,6 +872,16 @@
             // Show current pane
             document.getElementById(steps[index].id).classList.remove('hidden');
 
+            const stepNav = document.getElementById('step-nav-container');
+            const navButtons = document.getElementById('nav-buttons-container');
+            if (index === 0) { // Home screen
+                stepNav.classList.add('hidden');
+                navButtons.classList.add('hidden');
+            } else {
+                stepNav.classList.remove('hidden');
+                navButtons.classList.remove('hidden');
+            }
+
             // Update step indicator
             const stepItems = document.querySelectorAll('.step-item');
             stepItems.forEach((item, i) => {
@@ -877,7 +896,7 @@
             // Update button states and text
             const backButton = document.getElementById('back-button');
             const nextButton = document.getElementById('next-button');
-            backButton.style.display = index === 0 ? 'none' : 'inline-flex';
+            backButton.style.display = index === 1 ? 'none' : 'inline-flex'; // No back button on first step after home
             nextButton.style.display = index === steps.length - 1 ? 'none' : 'inline-flex';
 
             if (steps[index].id === 'selection') {
@@ -889,6 +908,9 @@
             }
              if(steps[index].id === 'assessment'){
                 updateDashboard();
+            }
+            if (steps[index].id === 'responder-details') {
+                setResponderDefaults();
             }
         }
         
@@ -1008,9 +1030,9 @@
 
         function triggerEmail() {
             const recipient = "jason.penalosa@accenture.com";
-            const subject = "Automation Status Report - Maturity Assessment";
+            const subject = "Automation Maturity Framework Survey";
             const body = `
-Hello SRE Team,
+Hello there!
 
 Please find the attached raw data from the Automation Maturity Assessment.
 
