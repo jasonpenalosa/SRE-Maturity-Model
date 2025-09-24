@@ -13,11 +13,24 @@
             font-family: 'Inter', sans-serif;
             background-color: #f0f2f5;
         }
-        .tab-button.active {
-            border-bottom-color: #9333ea; /* accenture purple */
-            color: #9333ea;
-            font-weight: 600;
+        .step-item.active .step-circle {
+            background-color: #9333ea;
+            color: white;
+            border-color: #9333ea;
         }
+        .step-item.active .step-text {
+             color: #9333ea;
+             font-weight: 600;
+        }
+         .step-item.completed .step-circle {
+            background-color: #a78bfa; /* lighter purple */
+            color: white;
+            border-color: #a78bfa;
+        }
+        .step-item.completed .step-text {
+            color: #5b21b6;
+        }
+
         .pillar-card {
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
@@ -88,32 +101,20 @@
         </header>
 
         <main class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-8">
-            <!-- Tabs Navigation -->
-            <div class="border-b border-gray-200">
-                <nav class="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
-                    <button class="tab-button active shrink-0 py-4 px-1 border-b-2 font-medium text-sm" data-tab="summary">
-                        Executive Summary
-                    </button>
-                    <button class="tab-button shrink-0 py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="responder-details">
-                        Responder Details
-                    </button>
-                    <button class="tab-button shrink-0 py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="pillars">
-                        Core Pillars
-                    </button>
-                    <button class="tab-button shrink-0 py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="levels">
-                        Maturity Levels
-                    </button>
-                     <button class="tab-button shrink-0 py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="selection">
-                        Tower Selection
-                    </button>
-                    <button class="tab-button shrink-0 py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="calculator">
-                        Maturity Assessment
-                    </button>
-                    <button class="tab-button shrink-0 py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300" data-tab="assessment">
-                        Maturity Report
-                    </button>
-                </nav>
+            <!-- Step Navigation -->
+            <div class="border-b border-gray-200 pb-5 mb-8">
+                <div id="step-indicator" class="flex items-center justify-between">
+                    <!-- Step indicator will be populated by JS -->
+                </div>
             </div>
+            
+            <div class="flex justify-end mb-4">
+                 <div class="flex gap-4">
+                    <button id="back-button" class="bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition-colors">Back</button>
+                    <button id="next-button" class="bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700 transition-colors shadow-md">Next</button>
+                </div>
+            </div>
+
 
             <!-- Tab Content -->
             <div id="tab-content" class="mt-8">
@@ -193,9 +194,6 @@
                             <!-- Checkboxes will be populated by JS -->
                         </div>
                     </div>
-                    <div class="mt-6 text-center">
-                         <button id="confirm-tower-selection" class="bg-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-purple-700 transition-colors shadow-lg">Confirm Selection & Proceed to Assessment</button>
-                    </div>
                 </div>
 
                 <!-- Maturity Calculator -->
@@ -213,9 +211,6 @@
                             </div>
                             <div id="assessment-questions" class="space-y-4">
                                 <!-- Assessment questions will be injected here -->
-                            </div>
-                            <div class="mt-8 text-center">
-                                <button id="submit-assessment" class="bg-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-purple-700 transition-colors shadow-lg">Submit & View Report</button>
                             </div>
                         </div>
                         <!-- Right Side: Summary Score -->
@@ -491,6 +486,17 @@
             "devops": ["No CI/CD", "CI", "CI/CD", "DevSecOps", "AIOps in CI/CD"],
             "obs-ai": ["Basic Monitoring", "Centralized Logging", "Observability (L,M,T)", "AIOps", "Predictive Analytics"]
         };
+        
+        const steps = [
+            { id: 'summary', name: 'Executive Summary' },
+            { id: 'responder-details', name: 'Responder Details' },
+            { id: 'pillars', name: 'Core Pillars' },
+            { id: 'levels', name: 'Maturity Levels' },
+            { id: 'selection', name: 'Tower Selection' },
+            { id: 'calculator', name: 'Maturity Assessment' },
+            { id: 'assessment', name: 'Maturity Report' },
+        ];
+        let currentStepIndex = 0;
 
         let towerGroupAssessments = {};
         let towerPillarScores = {};
@@ -503,6 +509,7 @@
             populatePillars();
             populateLevels();
             populateMatrix();
+            populateStepIndicator();
             setResponderDefaults();
             initializeDataStores();
             populateTowerSelection();
@@ -510,7 +517,7 @@
             renderCatalogAssessmentUI(selectedTowers.length > 0 ? selectedTowers[0] : null);
             renderSummarySliders();
             attachEventListeners();
-            updateAll();
+            navigateToStep(0);
         }
 
         function initializeDataStores() {
@@ -613,6 +620,23 @@
             `;
             summaryContainer.insertAdjacentHTML('beforeend', gridHtml);
         }
+        
+        function populateStepIndicator() {
+            const indicator = document.getElementById('step-indicator');
+            indicator.innerHTML = '';
+            steps.forEach((step, index) => {
+                const isLast = index === steps.length - 1;
+                const item = document.createElement('div');
+                item.className = `step-item flex items-center ${isLast ? '' : 'flex-1'}`;
+                item.innerHTML = `
+                    <div class="step-circle flex items-center justify-center w-8 h-8 rounded-full border-2 border-gray-300 bg-white text-gray-500 font-bold">${index + 1}</div>
+                    <div class="step-text ml-2 text-sm text-gray-500">${step.name}</div>
+                    ${!isLast ? '<div class="flex-1 border-t-2 border-gray-300 mx-4"></div>' : ''}
+                `;
+                indicator.appendChild(item);
+            });
+        }
+
 
         function setResponderDefaults() {
             document.getElementById('assessment-date').value = new Date().toISOString().split('T')[0];
@@ -721,43 +745,15 @@
         }
         
         function attachEventListeners() {
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const tabId = e.currentTarget.dataset.tab;
-                    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-                    e.currentTarget.classList.add('active');
-                    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
-                    document.getElementById(tabId).classList.remove('hidden');
-                     if(tabId === 'assessment'){
-                        updateDashboard();
-                    }
-                });
-            });
-
+            document.getElementById('back-button').addEventListener('click', () => navigateToStep(currentStepIndex - 1));
+            document.getElementById('next-button').addEventListener('click', handleNextClick);
+            
             document.getElementById('select-all-towers').addEventListener('click', () => {
                 document.querySelectorAll('input[name="tower-selection"]').forEach(cb => cb.checked = true);
             });
 
             document.getElementById('deselect-all-towers').addEventListener('click', () => {
                 document.querySelectorAll('input[name="tower-selection"]').forEach(cb => cb.checked = false);
-            });
-            
-            document.getElementById('confirm-tower-selection').addEventListener('click', () => {
-                selectedTowers = Array.from(document.querySelectorAll('input[name="tower-selection"]:checked')).map(cb => cb.value);
-                populateSelects();
-                const firstSelectedTower = selectedTowers.length > 0 ? selectedTowers[0] : null;
-                renderCatalogAssessmentUI(firstSelectedTower);
-                updateSummary(firstSelectedTower);
-
-                // Switch to the assessment tab
-                document.querySelector('.tab-button[data-tab="selection"]').classList.remove('active');
-                document.querySelector('.tab-button[data-tab="calculator"]').classList.add('active');
-                document.getElementById('selection').classList.add('hidden');
-                document.getElementById('calculator').classList.remove('hidden');
-            });
-
-            document.getElementById('submit-assessment').addEventListener('click', () => {
-                 showConfirmationModal();
             });
 
             document.getElementById('cancel-submission-button').addEventListener('click', hideConfirmationModal);
@@ -780,6 +776,69 @@
                 updateSummary(event.target.value);
             });
         }
+
+        // --- NAVIGATION LOGIC ---
+        function navigateToStep(index) {
+            if (index < 0 || index >= steps.length) return;
+            currentStepIndex = index;
+
+            // Hide all panes
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
+            // Show current pane
+            document.getElementById(steps[index].id).classList.remove('hidden');
+
+            // Update step indicator
+            const stepItems = document.querySelectorAll('.step-item');
+            stepItems.forEach((item, i) => {
+                item.classList.remove('active', 'completed');
+                if (i < index) {
+                    item.classList.add('completed');
+                } else if (i === index) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Update button states and text
+            const backButton = document.getElementById('back-button');
+            const nextButton = document.getElementById('next-button');
+            backButton.style.display = index === 0 ? 'none' : 'inline-flex';
+            nextButton.style.display = index === steps.length - 1 ? 'none' : 'inline-flex';
+
+            if (steps[index].id === 'selection') {
+                nextButton.textContent = 'Confirm Selection & Proceed';
+            } else if (steps[index].id === 'calculator') {
+                nextButton.textContent = 'Submit & View Report';
+            } else {
+                nextButton.textContent = 'Next';
+            }
+             if(steps[index].id === 'assessment'){
+                updateDashboard();
+            }
+        }
+        
+        function handleNextClick() {
+            const currentStepId = steps[currentStepIndex].id;
+            
+            if (currentStepId === 'selection') {
+                // Logic from old "confirm" button
+                selectedTowers = Array.from(document.querySelectorAll('input[name="tower-selection"]:checked')).map(cb => cb.value);
+                if(selectedTowers.length === 0){
+                    alert("Please select at least one tower to proceed.");
+                    return;
+                }
+                populateSelects();
+                const firstSelectedTower = selectedTowers[0];
+                renderCatalogAssessmentUI(firstSelectedTower);
+                updateSummary(firstSelectedTower);
+            } else if (currentStepId === 'calculator') {
+                // Logic from old "submit" button
+                showConfirmationModal();
+                return; // Don't navigate yet, wait for modal confirmation
+            }
+            
+            navigateToStep(currentStepIndex + 1);
+        }
+        
         
         // --- MODAL AND SUBMISSION LOGIC ---
         function showConfirmationModal() {
@@ -808,13 +867,9 @@
             const storageKey = `assessment-${responderDetails.engagementName}-${responderDetails.projectTeam}`;
             localStorage.setItem(storageKey, JSON.stringify(assessmentData));
             
-            // 2. Hide modal and switch tab
+            // 2. Hide modal and navigate to the final step
             hideConfirmationModal();
-            document.querySelector('.tab-button[data-tab="calculator"]').classList.remove('active');
-            document.querySelector('.tab-button[data-tab="assessment"]').classList.add('active');
-            document.getElementById('calculator').classList.add('hidden');
-            document.getElementById('assessment').classList.remove('hidden');
-            updateDashboard();
+            navigateToStep(currentStepIndex + 1);
 
             // 3. Simulate sending email with PDF
             sendEmailWithPdf();
@@ -916,7 +971,6 @@
         }
 
         function calculatePillarScores(towerName) {
-            // FIX: Reset pillar scores for the current tower before recalculating
             pillarsData.forEach(p => { towerPillarScores[towerName][p.id] = 0; });
 
             const groupScores = towerGroupAssessments[towerName];
@@ -924,8 +978,16 @@
             const towerData = towerCatalogData[towerName];
             
             if (!towerData || !towerData.groups) {
-                return; // Exit if no data for the tower
-            };
+                return;
+            }
+
+            let totalRatedScore = 0;
+            let ratedGroupsCount = towerData.groups.length; // Assume all groups are rated
+            towerData.groups.forEach(group => {
+                const score = groupScores[group.name] || 0;
+                totalRatedScore += score;
+            });
+            const overallTowerAverage = ratedGroupsCount > 0 ? totalRatedScore / ratedGroupsCount : 0;
 
             pillarsData.forEach(p => { pillarContributions[p.id] = { total: 0, count: 0 }; });
 
@@ -941,7 +1003,9 @@
 
             pillarsData.forEach(pillar => {
                 const contribution = pillarContributions[pillar.id];
-                const avgScore = contribution.count > 0 ? contribution.total / contribution.count : 0;
+                const avgScore = contribution.count > 0 
+                    ? contribution.total / contribution.count 
+                    : overallTowerAverage;
                 towerPillarScores[towerName][pillar.id] = avgScore;
             });
         }
