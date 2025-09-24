@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <style>
         body {
@@ -308,7 +309,7 @@
                         <br><br>
                         Upon submission, a raw data export will be downloaded, and your email client will open.
                         <br><br>
-                        <strong class="text-gray-700">Remember to attach the downloaded CSV file before sending.</strong>
+                        <strong class="text-gray-700">Remember to attach the downloaded Excel file before sending.</strong>
                     </p>
                 </div>
                 <div class="items-center px-4 py-3 gap-2 flex justify-center">
@@ -969,9 +970,8 @@
         function saveAndSubmitAssessment() {
             hideConfirmationModal();
 
-            // 1. Generate and download raw data CSV
-            const csvData = generateRawDataCSV();
-            downloadCSV(csvData);
+            // 1. Generate and download raw data EXCEL
+            generateAndDownloadExcel();
 
             // 2. Trigger email client
             triggerEmail();
@@ -980,54 +980,55 @@
             navigateToStep(currentStepIndex + 1);
         }
 
-        function generateRawDataCSV() {
+        function generateAndDownloadExcel() {
+            // --- Sheet 1: Assessment Data ---
             const responderDetails = {
                 "Engagement Name": document.getElementById('engagement-name').value,
                 "Project Team": document.getElementById('project-team').value,
                 "Delivery Lead": document.getElementById('delivery-lead').value,
                 "Service Delivery Manager": document.getElementById('sdm').value,
                 "Engagement MD": document.getElementById('engagement-md').value,
-                "Assessment Date": document.getElementById('assessment-date').value
+                "Date of Assessment": document.getElementById('assessment-date').value
             };
 
-            let csvContent = "";
-            // Add responder details
-            Object.keys(responderDetails).forEach(key => {
-                csvContent += `"${key}","${responderDetails[key]}"\r\n`;
-            });
-            csvContent += "\r\n"; // Blank line for separation
-
-            // Add assessment data headers
-            csvContent += "Service Tower,Catalog Group,Maturity Level\r\n";
-
-            // Add assessment data rows
+            const assessmentDataForSheet = [];
             selectedTowers.forEach(tower => {
                 const towerData = towerCatalogData[tower];
                 if (towerData && towerData.groups) {
                     towerData.groups.forEach(group => {
                         const level = towerGroupAssessments[tower][group.name] || 0;
-                        csvContent += `"${tower}","${group.name}","${level}"\r\n`;
+                        (group.mappedPillars || []).forEach(pillarId => {
+                            const pillar = pillarsData.find(p => p.id === pillarId);
+                            if (pillar) {
+                                assessmentDataForSheet.push({
+                                    ...responderDetails,
+                                    "Service Tower": tower,
+                                    "Catalog Group": group.name,
+                                    "Core Pillar": pillar.name,
+                                    "Maturity Level": level,
+                                    "Pillar Weight": pillar.weight
+                                });
+                            }
+                        });
                     });
                 }
             });
 
-            return csvContent;
-        }
-        
-        function downloadCSV(csvData) {
-            const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
+            const ws1 = XLSX.utils.json_to_sheet(assessmentDataForSheet, {header: [
+                "Engagement Name", "Project Team", "Delivery Lead", "Service Delivery Manager",
+                "Engagement MD", "Date of Assessment", "Service Tower", "Catalog Group", 
+                "Core Pillar", "Maturity Level", "Pillar Weight"
+            ]});
+            
+            // --- Create Workbook and Download ---
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws1, "Assessment Data");
+            
             const engagementName = document.getElementById('engagement-name').value || 'Assessment';
             const date = new Date().toISOString().split('T')[0];
-            link.setAttribute("download", `${engagementName}-Raw-Data-${date}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            XLSX.writeFile(wb, `${engagementName}-Raw-Data-${date}.xlsx`);
         }
-
+        
         function triggerEmail() {
             const recipient = "jason.penalosa@accenture.com";
             const subject = "Automation Maturity Framework Survey";
@@ -1038,7 +1039,7 @@ Please find the attached raw data from the Automation Maturity Assessment.
 
 This file contains the responder's details and their inputs for each selected service tower.
 
-**IMPORTANT:** Please attach the CSV file that was just downloaded to your computer before sending this email.
+**IMPORTANT:** Please attach the Excel file that was just downloaded to your computer before sending this email.
 
 Thank you.
             `;
