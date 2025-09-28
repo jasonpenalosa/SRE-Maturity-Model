@@ -145,28 +145,28 @@
                     <h2 class="text-2xl font-semibold text-slate-800 mb-6">Responder Details</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 bg-slate-50 p-8 rounded-lg border border-slate-200">
                         <div>
-                            <label for="engagement-name" class="block text-sm font-medium text-gray-700">Engagement Name</label>
-                            <input type="text" id="engagement-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                            <label for="eid" class="block text-sm font-medium text-gray-700">EID</label>
+                            <input type="text" id="eid" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" required>
                         </div>
                         <div>
                             <label for="project-team" class="block text-sm font-medium text-gray-700">Project Team</label>
-                            <input type="text" id="project-team" value="SRE" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                            <input type="text" id="project-team" value="SRE" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" required>
                         </div>
                         <div>
                             <label for="delivery-lead" class="block text-sm font-medium text-gray-700">Delivery Lead</label>
-                            <input type="text" id="delivery-lead" value="Juan Dela Cruz" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                            <input type="text" id="delivery-lead" value="Juan Dela Cruz" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" required>
                         </div>
                         <div>
                             <label for="sdm" class="block text-sm font-medium text-gray-700">Service Delivery Manager</label>
-                            <input type="text" id="sdm" value="Juan Dela Cruz" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                            <input type="text" id="sdm" value="Juan Dela Cruz" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" required>
                         </div>
                         <div>
                             <label for="engagement-md" class="block text-sm font-medium text-gray-700">Engagement MD</label>
-                            <input type="text" id="engagement-md" value="Juan Dela Cruz" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                            <input type="text" id="engagement-md" value="Juan Dela Cruz" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" required>
                         </div>
                         <div>
                             <label for="assessment-date" class="block text-sm font-medium text-gray-700">Date of Assessment</label>
-                            <input type="date" id="assessment-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                            <input type="date" id="assessment-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" required>
                         </div>
                     </div>
                 </div>
@@ -1107,7 +1107,28 @@
         function handleNextClick() {
             const currentStepId = steps[currentStepIndex].id;
             
-            if (currentStepId === 'selection') {
+             if (currentStepId === 'responder-details') {
+                const requiredFields = [
+                    { id: 'eid', name: 'EID' },
+                    { id: 'project-team', name: 'Project Team' },
+                    { id: 'delivery-lead', name: 'Delivery Lead' },
+                    { id: 'sdm', name: 'Service Delivery Manager' },
+                    { id: 'engagement-md', name: 'Engagement MD' }
+                ];
+                let firstInvalidField = null;
+                for (const field of requiredFields) {
+                    const inputElement = document.getElementById(field.id);
+                    if (!inputElement.value.trim()) {
+                        firstInvalidField = field.name;
+                        break;
+                    }
+                }
+
+                if (firstInvalidField) {
+                    alert(`Please fill out all fields in the Responder Details section. '${firstInvalidField}' is missing.`);
+                    return;
+                }
+            } else if (currentStepId === 'selection') {
                 selectedTowers = Array.from(document.querySelectorAll('input[name="tower-selection"]:checked')).map(cb => cb.value);
                 if(selectedTowers.length === 0){
                     alert("Please select at least one tower to proceed.");
@@ -1171,7 +1192,7 @@
 
         function generateAndDownloadExcel() {
             const responderDetails = {
-                "Engagement Name": document.getElementById('engagement-name').value,
+                "EID": document.getElementById('eid').value,
                 "Project Team": document.getElementById('project-team').value,
                 "Delivery Lead": document.getElementById('delivery-lead').value,
                 "Service Delivery Manager": document.getElementById('sdm').value,
@@ -1180,19 +1201,14 @@
             };
 
             const assessmentDataForSheet = [];
-            const catalogMappingData = [];
-
+            
             selectedTowers.forEach(tower => {
                 const towerData = granularTowerCatalogData[tower];
                 if (towerData) {
                     for (const groupName in towerData) {
                         const group = towerData[groupName];
-                        catalogMappingData.push({
-                            "Service Tower": tower,
-                            "Catalog Group": groupName
-                        });
                         group.items.forEach(itemName => {
-                            const level = granularItemAssessments[tower][itemName] || 0;
+                             const level = granularItemAssessments[tower][itemName] || 0;
                             (group.mappedPillars || []).forEach(pillarId => {
                                 const pillar = pillarsData.find(p => p.id === pillarId);
                                 if (pillar) {
@@ -1214,16 +1230,14 @@
 
             const wb = XLSX.utils.book_new();
             const wsData = XLSX.utils.json_to_sheet(assessmentDataForSheet, {header: [
-                "Engagement Name", "Project Team", "Delivery Lead", "Service Delivery Manager",
+                "EID", "Project Team", "Delivery Lead", "Service Delivery Manager",
                 "Engagement MD", "Date of Assessment", "Service Tower", "Catalog Group", 
                 "Service Catalog", "Core Pillar", "Maturity Level", "Pillar Weight"
             ]});
-            const wsMap = XLSX.utils.json_to_sheet(catalogMappingData);
             
             XLSX.utils.book_append_sheet(wb, wsData, "Assessment Data");
-            XLSX.utils.book_append_sheet(wb, wsMap, "Tower Catalog Reference");
             
-            const engagementName = document.getElementById('engagement-name').value || 'Assessment';
+            const engagementName = document.getElementById('eid').value || 'Assessment';
             const date = new Date().toISOString().split('T')[0];
             XLSX.writeFile(wb, `${engagementName}-Raw-Data-${date}.xlsx`);
         }
@@ -1249,7 +1263,7 @@ Thank you.
 
 
         async function exportToPdf() {
-            const engagementName = document.getElementById('engagement-name').value || 'Assessment';
+            const engagementName = document.getElementById('eid').value || 'Assessment';
             const date = new Date().toISOString().split('T')[0];
             
             const pdfExportContainer = document.createElement('div');
