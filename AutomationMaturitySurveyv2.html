@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategic Automation Ascendancy Framework</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .step-item.active .step-circle {
+            background-color: #9333ea;
+            color: white;
+            border-color: #9333ea;
+        }
+        .step-item.active .step-text {
+             color: #9333ea;
+             font-weight: 600;
+        }
+         .step-item.completed .step-circle {
+            background-color: #a78bfa; /* lighter purple */
+            color: white;
+            border-color: #a78bfa;
+        }
+        .step-item.completed .step-text {
+            color: #5b21b6;
+        }
+        .step-item.completed {
+            cursor: pointer;
+        }
+
+        .pillar-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .pillar-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .level-item::before {
+            content: '';
+            position: absolute;
+            left: 1.25rem;
+            top: 2.5rem;
+            bottom: -2.5rem;
+            width: 2px;
+            background-color: #d1d5db;
+            transform: translateX(-50%);
+        }
+        .level-item:last-child::before {
+            display: none;
+        }
+        .level-circle {
+            z-index: 10;
+        }
+        /* Custom range input style */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #9333ea;
+            cursor: pointer;
+            border-radius: 50%;
+            margin-top: -8px;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #9333ea;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        details > summary {
+            cursor: pointer;
+        }
+        /* Styles for PDF export content */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #pdf-content, #pdf-content * {
+                visibility: visible;
+            }
+            #pdf-content {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased text-slate-700">
+    <div class="min-h-screen px-4 sm:px-6 lg:px-8">
+        <header class="text-center py-10 flex flex-col items-center">
+            <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600">Strategic Automation Ascendancy Framework</h1>
+            <p class="mt-2 text-lg font-medium text-slate-500">Powered by Accenture SRE Capability Team</p>
+        </header>
+
+        <main class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-8">
+            <!-- Step Navigation -->
+            <div id="step-nav-container" class="border-b border-gray-200 pb-5 mb-8">
+                <div id="step-indicator" class="flex items-center justify-between">
+                    <!-- Step indicator will be populated by JS -->
+                </div>
+            </div>
+            
+            <div id="nav-buttons-container" class="flex justify-end mb-4">
+                 <div class="flex gap-4">
+                    <button id="back-button" class="bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition-colors">Back</button>
+                    <button id="next-button" class="bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700 transition-colors shadow-md">Next</button>
+                </div>
+            </div>
+
+
+            <!-- Tab Content -->
+            <div id="tab-content">
+                <!-- Home Screen -->
+                <div id="home" class="tab-pane">
+                    <div class="text-center py-16">
+                        <h2 class="text-3xl font-bold text-slate-800 mb-8">Automation Maturity Assessment Survey</h2>
+                        <button id="begin-survey-button" class="bg-purple-600 text-white font-bold py-4 px-8 rounded-lg hover:bg-purple-700 transition-colors shadow-lg text-lg">Begin Survey</button>
+                    </div>
+                </div>
+
+                <!-- Executive Summary -->
+                <div id="summary" class="tab-pane hidden">
+                    <h2 class="text-2xl font-semibold text-slate-800 mb-4">Executive Summary</h2>
+                    <div class="space-y-4 text-slate-600 leading-relaxed">
+                        <p>The Strategic Automation Ascendancy Framework is a comprehensive model designed to guide our organization's evolution from manual, reactive IT operations to a proactive, autonomous, and AI-driven state. By blending the aspirational goals of an agentic future with the concrete, measurable criteria from our current Automation Maturity Assessment, this framework provides a clear, actionable roadmap.</p>
+                        <p>It is built on <strong>eight core pillars</strong> of operational excellence, each with a <strong>strategic weight</strong> reflecting its impact on business resilience, efficiency, and innovation. Our progress through <strong>five distinct maturity levels</strong> will be measured against these pillars, providing a unified score that allows us to track our transformation, prioritize investments, and align technical efforts with strategic business outcomes. This document serves as a guide for both executive leaders seeking to understand the "why" and "what" of this journey and for architects designing the "how."</p>
+                    </div>
+                     <!-- Matrix will be injected here by JS -->
+                </div>
+                
+                 <!-- Responder Details -->
+                <div id="responder-details" class="tab-pane hidden">
+                    <h2 class="text-2xl font-semibold text-slate-800 mb-6">Responder Details</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 bg-slate-50 p-8 rounded-lg border border-slate-200">
+                        <div>
+                            <label for="engagement-name" class="block text-sm font-medium text-gray-700">Engagement Name</label>
+                            <input type="text" id="engagement-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="project-team" class="block text-sm font-medium text-gray-700">Project Team</label>
+                            <input type="text" id="project-team" value="SRE" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="delivery-lead" class="block text-sm font-medium text-gray-700">Delivery Lead</label>
+                            <input type="text" id="delivery-lead" value="Juan Dela Cruz" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="sdm" class="block text-sm font-medium text-gray-700">Service Delivery Manager</label>
+                            <input type="text" id="sdm" value="Juan Dela Cruz" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="engagement-md" class="block text-sm font-medium text-gray-700">Engagement MD</label>
+                            <input type="text" id="engagement-md" value="Juan Dela Cruz" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="assessment-date" class="block text-sm font-medium text-gray-700">Date of Assessment</label>
+                            <input type="date" id="assessment-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm">
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Core Pillars -->
+                <div id="pillars" class="tab-pane hidden">
+                     <h2 class="text-2xl font-semibold text-slate-800 mb-2">The Eight Core Pillars of Automation</h2>
+                     <p class="text-slate-600 mb-8">These represent the foundational areas we must master to achieve operational excellence.</p>
+                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                        <!-- Pillar Data will be injected here by JS -->
+                     </div>
+                </div>
+
+                <!-- Maturity Levels -->
+                <div id="levels" class="tab-pane hidden">
+                    <h2 class="text-2xl font-semibold text-slate-800 mb-2">The Five Maturity Levels</h2>
+                    <p class="text-slate-600 mb-8">The journey from a manual, reactive state to a fully autonomous, agent-driven one, aligned with our service assessment criteria.</p>
+                    <div class="relative pl-12">
+                         <!-- Levels Data will be injected here by JS -->
+                    </div>
+                </div>
+                
+                <!-- Tower Selection -->
+                <div id="selection" class="tab-pane hidden">
+                    <h2 class="text-2xl font-semibold text-slate-800 mb-2">Select Towers for Assessment</h2>
+                    <p class="text-slate-600 mb-6">Choose the service towers you want to include in this assessment session. Your selections will be available in the 'Maturity Assessment' and 'Maturity Report' tabs.</p>
+                    <div class="border-t border-b border-gray-200 py-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-medium">Available Towers</h3>
+                            <div class="space-x-4">
+                                <button id="select-all-towers" class="text-sm font-medium text-purple-600 hover:text-purple-800">Select All</button>
+                                <button id="deselect-all-towers" class="text-sm font-medium text-purple-600 hover:text-purple-800">Deselect All</button>
+                            </div>
+                        </div>
+                        <div id="tower-selection-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            <!-- Checkboxes will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maturity Calculator -->
+                <div id="calculator" class="tab-pane hidden">
+                     <div class="flex flex-col lg:flex-row gap-8">
+                        <!-- Left Side: Detailed Assessment -->
+                        <div class="lg:w-2/3">
+                            <h2 class="text-2xl font-semibold text-slate-800 mb-2">Detailed Catalog Assessment</h2>
+                             <div class="bg-blue-50 border-l-4 border-blue-400 p-4 my-6 rounded-r-lg">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-sm text-blue-700">
+                                            The rating options 0-4 directly map to the maturity levels (0-Core, 1-Established, 2-Adaptive, 3-Autonomous, 4-Disruptive). To review the detailed definitions for each level, you can click on the 'Maturity Levels' step in the navigation bar above.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="tower-assessment-list-container" class="mb-6 pb-4 border-b">
+                                <!-- Tower tabs will be populated here -->
+                            </div>
+
+                            <div id="assessment-questions" class="space-y-4">
+                                <!-- Assessment questions will be injected here -->
+                            </div>
+                        </div>
+                        <!-- Right Side: Summary Score -->
+                        <div class="lg:w-1/3">
+                             <h2 class="text-2xl font-semibold text-slate-800 mb-2">Pillar Score Summary</h2>
+                            <p class="text-slate-600 mb-6">Pillar scores for the selected tower.</p>
+                            <div class="bg-slate-50 rounded-lg p-6 sticky top-8">
+                                <div id="summary-sliders" class="space-y-4 mb-6">
+                                    <!-- Sliders will be generated here -->
+                                </div>
+                                <div class="text-center">
+                                    <h3 class="text-lg font-medium text-slate-600">Overall Maturity Score</h3>
+                                    <p id="total-score" class="text-6xl font-bold text-purple-600 my-2">0.00</p>
+                                    <p id="maturity-level-display" class="inline-block text-xl font-semibold text-slate-800 bg-slate-200 rounded-full px-5 py-1">Core</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maturity Report -->
+                <div id="assessment" class="tab-pane hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-2xl font-semibold text-slate-800">Maturity Report</h2>
+                            <p class="text-slate-600">This dashboard summarizes the assessment results for all selected towers.</p>
+                        </div>
+                        <button id="export-pdf-button" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors shadow-md flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                            Export Results to PDF
+                        </button>
+                    </div>
+                    
+                     <div id="dashboard-summary" class="mb-8 p-6 bg-purple-50 border border-purple-200 rounded-lg text-center">
+                        <h3 class="text-lg font-medium text-slate-600">Overall Maturity Score (All Selected Towers)</h3>
+                        <p id="overall-dashboard-score" class="text-6xl font-bold text-purple-600 my-2">0.00</p>
+                        <p id="overall-dashboard-level" class="inline-block text-xl font-semibold bg-purple-200 text-purple-800 rounded-full px-5 py-1">Core</p>
+                    </div>
+
+                    <div id="dashboard-results-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Tower result cards will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Incomplete Assessment Modal -->
+    <div id="incomplete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full hidden z-50 flex items-center justify-center p-4">
+        <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Assessment Incomplete</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p class="text-sm text-gray-500">
+                        Please review the following towers to ensure your assessment is complete and accurate before submitting:
+                    </p>
+                    <ul id="pending-towers-list" class="text-sm text-gray-700 font-medium list-disc list-inside mt-2 text-left">
+                        <!-- Pending towers will be listed here -->
+                    </ul>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="close-incomplete-modal-button" class="px-4 py-2 bg-purple-600 text-white text-base font-medium rounded-md w-full hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                        OK
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full hidden z-50 flex items-center justify-center p-4">
+        <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
+                    <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Confirm Submission</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p class="text-sm text-gray-500">
+                        Please confirm that your responses are accurate to the best of your knowledge.
+                        <br><br>
+                        Upon submission, a raw data export will be downloaded, and your email client will open.
+                        <br><br>
+                        <strong class="text-gray-700">Remember to attach the downloaded Excel file before sending.</strong>
+                    </p>
+                </div>
+                <div class="items-center px-4 py-3 gap-2 flex justify-center">
+                    <button id="cancel-submission-button" class="px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-24 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        Cancel
+                    </button>
+                    <button id="confirm-submission-button" class="px-4 py-2 bg-purple-600 text-white text-base font-medium rounded-md w-auto hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                        Confirm & Proceed
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const pillarsData = [
+            { id: "fin-man", name: "Financial Management", weight: 10, definition: "A framework that brings together technology, finance, and business teams to drive financial accountability. It maximizes the value derived from investments through collaboration, data-driven decision-making, and shared responsibility for incurred costs." },
+            { id: "sec-pos", name: "Security Posture Management", weight: 20, definition: "Cybersecurity technology that automates and unifies the identification and remediation of misconfigurations and vulnerabilities across hybrid and multi-cloud environments. It provides a single view of the security posture to reduce risk." },
+            { id: "mod-proc", name: "Modern Processes", weight: 5, definition: "A disciplined, data-driven approach to integrating software development (Dev) and IT operations (Ops). It automates and optimizes processes through tools like Agile, SRE, and Platform Engineering to build, test, and release software faster and more reliably." },
+            { id: "defect-dens", name: "Reduce Defect Density", weight: 10, definition: "The process of identifying, analyzing, and resolving the underlying causes of incidents to prevent their recurrence. It aims to minimize business impact by moving from a reactive to a proactive approach to issue management." },
+            { id: "self-heal", name: "Self Heal / Auto Resolution", weight: 20, definition: "Creating a resilient system that can automatically detect, diagnose, and recover from failures without manual intervention. This includes automated event correlation, runbooks, and self-healing scripts to maintain service availability." },
+            { id: "change-rel", name: "Change/Release/Patching", weight: 10, definition: "The automation of implementing changes to streamline processes, reduce errors, improve speed, and enhance security. This includes predicting change risk, analyzing release impact, and deploying patches through automated workflows." },
+            { id: "devops", name: "DevOps Pipelines", weight: 10, definition: "An automated process for developers to reliably and efficiently get their code from version control into production. It encompasses build, test, and deployment stages (CI/CD) with integrated quality and security gates." },
+            { id: "obs-ai", name: "Observability & AI Insights", weight: 15, definition: "The practice of equipping systems with the tooling to debug in production. It goes beyond monitoring by collecting high-granularity data (logs, metrics, traces) and using AIOps to provide deep, actionable insights and predictive analysis." },
+        ];
+        
+        const allTowers = [
+            "Cloud Ops", "Windows Systems", "Linux Systems", "Hypervisors", "AIX Systems", 
+            "Storage Systems", "Backup Systems", "Database Systems", "Middleware Systems", 
+            "Batch Ops", "Monitoring & Tools", "Workplace Services", "Service Management", 
+            "Network Services", "Service Desk"
+        ];
+        
+        // Data structure for granular assessment, derived from the original Excel files
+        const granularTowerCatalogData = {
+            "Cloud Ops": {
+                "Compute & App Services": {
+                    items: [
+                        "Change (scale up or scale out) App Service Plan", "Configure hybrid Connections for ASPs", "Stop/Start/Restart Webapp",
+                        "Configure hybrid connections for individual Apps", "Configure/updade locks for Individual Apps", "Create/modify/delete Database connection for Webapp",
+                        "Enable / Disable Web Server diagnostics for troubleshooting", 'Diagnose common issues with Apps using "Diagnose and solve problems" wizard - Azure portal',
+                        "Enable / Disable Application diagnostics upon request from App owners", "Export activity logs for App service plans",
+                        "Create/delete manual backups", "Configure automated backups", "Restore Webapps from a backup", "Delete backups", "Create/Delete Deployment slots",
+                        "Configure auto-scaling for Webapps", "Swap deployment slots", "Create/delete an alert rule for a Webapp", "Create/delete an alert rule for an App Service Plan",
+                        "Create/modify/delete a Virtual Machine", "Connect to a VM", "Modify VM properties (Size, disk, network)", "Troubleshoot VM provisioning failures",
+                        "Troubleshoot VM allocation failures", "Start/stop/restart/deallocate a VM", "Create and manage VM snapshots", "Capture a VM image", "Reset remote access for a VM",
+                        "Create/configure/delete an Availability Set", "Configure backup for a VM", "Restore a VM from backup", "Manage VM extensions",
+                        "Configure/delete Endpoint monitoring for a VM", "Troubleshoot common VM issues (performance, connectivity)", "Create and Configure new Azure Container Apps with Pipeline",
+                        "Create and configure optional resources with Pipeline", "Delete Container Apps", "Delete optional resources", "Start Container app", "Stop Container app", "Resize Containers",
+                        "Delete specific Containers within Azure Container Apps"
+                    ],
+                    mappedPillars: ["self-heal", "change-rel", "devops", "fin-man"]
+                },
+                "Storage & Data": {
+                    items: [
+                        "Create/Delete a Storage account", "Manage storage account access keys", "Configure/modify storage account properties (replication, encryption)",
+                        "Create/delete a blob container", "Manage container properties and metadata", "Upload/download/delete blobs",
+                        "Create/delete a file share", "Manage file share properties and quotas", "Create/delete a table", "Manage table entities",
+                        "Create/delete a queue", "Manage queue messages", "Configure Content Delivery Network (CDN) for a storage account",
+                        "Configure Custom Domain for a storage account", "Create and Configure new Azure SQL Database with Pipeline",
+                        "Create and configure optional resources with Pipeline (Azure SQL)", "Delete Azure SQL Database", "Delete optional resources (Azure SQL)",
+                        "Configure firewall rules for SQL Database", "Configure Geo-Replication for SQL Database", "Backup & Restore of SQL Database"
+                    ],
+                    mappedPillars: ["self-heal", "fin-man", "sec-pos"]
+                },
+                 "Networking": {
+                    items: [
+                        "Create/modify/delete a Virtual Network (VNet)", "Create/modify/delete a subnet", "Configure VNet peering", "Create/modify/delete a Network Security Group (NSG)",
+                        "Create/modify/delete NSG rules", "Associate/disassociate an NSG to a subnet or NIC", "Create/modify/delete a Route Table",
+                        "Create/modify/delete a route in a Route Table", "Associate/disassociate a Route Table to a subnet", "Create/modify/delete a Public IP address",
+                        "Associate/disassociate a Public IP to a resource", "Create/modify/delete a Network Interface (NIC)", "Attach/detach a NIC to/from a VM",
+                        "Create/modify/delete a Load Balancer", "Configure load balancing rules, health probes, and backend pools", "Create/modify/delete an Application Gateway",
+                        "Create/modify/delete a VPN Gateway", "Configure Point-to-Site or Site-to-Site VPN", "Create/modify/delete an ExpressRoute circuit",
+                        "Create/modify/delete an Azure DNS zone", "Create/modify/delete a DNS record", "Get Load Balancer IP & Request DNS IP"
+                    ],
+                    mappedPillars: ["sec-pos", "change-rel", "self-heal"]
+                },
+                "Security & Identity": {
+                    items: [
+                        "Manage users and groups in Azure Active Directory", "Reset user passwords", "Assign/unassign licenses to users", "Configure Multi-Factor Authentication (MFA)",
+                        "Create/manage App registrations", "Manage role-based access control (RBAC) assignments", "Create/manage custom RBAC roles",
+                        "Review and audit access permissions", "Create/modify/delete a Key Vault", "Manage Key Vault access policies", "Add/update/delete secrets, keys, and certificates in Key Vault",
+                        "Configure security policies in Azure Security Center", "Review and remediate security recommendations", "Respond to security alerts", "Configure Just-in-Time (JIT) VM access"
+                    ],
+                    mappedPillars: ["sec-pos", "mod-proc"]
+                },
+                "Monitoring & Governance": {
+                    items: [
+                        "Configure diagnostic settings for Azure resources", "Create and manage Log Analytics workspaces", "Query data using Kusto Query Language (KQL)",
+                        "Create/manage alert rules in Azure Monitor", "Configure action groups for alerts", "Create and customize dashboards in the Azure portal",
+                        "Analyze metrics using Metrics Explorer", "Review activity logs for subscription-level events", "Create/assign/manage Azure Policy definitions",
+                        "Review policy compliance and remediate non-compliant resources", "Create/manage resource locks", "Analyze costs and manage budgets in Azure Cost Management"
+                    ],
+                    mappedPillars: ["obs-ai", "fin-man", "defect-dens", "sec-pos"]
+                },
+                "AKS (Kubernetes)": {
+                    items: [
+                         "Create new AKS Cluster using Pipeline", "Delete AKS Cluster using Pipeline", "Configure network profile for an existing cluster", "Modify Min/Max node to an existing cluster",
+                         "Add new node pool to an existing cluster", "Remove node pool to an existing cluster", "Azure Kubernetes services Node scaling configuration",
+                         "Upgrade the AKS Product version", "Upgrade the node image version (Only for Zero Day Vulnerabilities)", "Renewal for Certificate on Cluster",
+                         "Modify Key Vault for Proxy Certificate", "Create Persistant Volume for clusters", "Update Persistant Volume size", "Backup & Restore of persistent storage", "Backup & Restore of AKS Cluster"
+                    ],
+                    mappedPillars: ["devops", "self-heal", "change-rel", "sec-pos"]
+                }
+            },
+            "Windows Systems": {
+                "OS & Provisioning": {
+                    items: ["Update firmware/driver/microcode on a server", "Request logs from a server or application", "Create/Remove/Change OS features", "Create/Remove/Change OS roles", "Install/Reinstall an operating system on a server", "In-Place OS Upgradation", "OS Upgradation(New Build and Cut-over)", "Modify system parameter", "Run a system script on a server or virtual machine"],
+                    mappedPillars: ["change-rel", "devops"]
+                },
+                "Clustering & AD": {
+                     items: ["Create/Configure/Remove a server in a cluster farm", "Active Directory object (User/Group/OU/Computer) management", "Password Reset", "Create/Modify/Delete Group Policy", "GPO link/delink to OU", "AD Replication monitoring and troubleshooting", "FSMO Role health check", "DNS/DHCP/WINS service administration"],
+                     mappedPillars: ["sec-pos", "mod-proc", "self-heal"]
+                },
+                "Patch & Vulnerability Management": {
+                    items: ["Exceptional OS patching", "Vulnerability Remediation", "Zero-Day Vulnerability Remediation", "Quarterly Vulnerability Validation and Remediation", "WSUS Patch Management"],
+                    mappedPillars: ["sec-pos", "change-rel"]
+                },
+                "Performance & Health": {
+                    items: ["On-Demand Performance and Availability report", "On-Demand Disk I/Ops report", "Network packet capture", "PerfMon configure", "Non-Complaince alert Remediation"],
+                    mappedPillars: ["obs-ai", "self-heal", "defect-dens"]
+                },
+                "Storage, Backup & Security": {
+                     items: ["Disk Extension/Allocation", "BitLocker Disk Encryption and Decryption", "Windows Defender Install/Uninstall", "Creation of Datastore", "Datastore alert remediation", "Unmount Datastore", "Backup Failures Remediation(OS and Azure-Agent perspective)"],
+                     mappedPillars: ["self-heal", "sec-pos"]
+                }
+            },
+            "Linux Systems": {
+                "System Administration": {
+                    items: ["HA Cluster Status", "Server Health Check", "ILO Connectivity Check", "Problem ticket Check", "On prem servers Vulnerability Remediation Check", "Change Preparation", "Blackout Set", "AV Compliancy Check", "Snapshot Backup", "File Transfer as per ondemand Log analysis", "Server Onboarding (ORT)", "Server Deboarding", "Disk Resize Activity", "OS license Menagement", "Certificate management", "Additional package Installation and Uninstallation", "Repo Connectivity check", "DR Activity", "User ID and Firefighter ID management", "Linux inventory and CMDB update"],
+                    mappedPillars: ["self-heal", "sec-pos", "change-rel", "obs-ai", "defect-dens"]
+                },
+                "Patch Management": {
+                    items: ["Patch compliancy check", "OnDemand Patching", "Monthly Patching", "Security Agent config/ Update", "EOL OS upgrade", "Online Patching", "Patching LOT creation & modification"],
+                    mappedPillars: ["sec-pos", "change-rel"]
+                },
+                "Process & Collaboration": {
+                    items: ["BackLog Call", "Internal CAB", "Risk Register report and call", "SERVICE Improvement calls", "Service Introduction call", "Automation Call", "OnDemand onboard -I & AM RBAC", "Reconcile account-I & AM RBAC", "Refresh Activity", "Refresh Activity Meeting"],
+                    mappedPillars: ["mod-proc"]
+                }
+            },
+            "Hypervisors": {
+                "Infrastructure Management": {
+                    items: ["ESXI patching", "Firmware Upgrade Hyperflex + UCS", "Fabric Interconnect & HXDP upgrade", "Vmware tools upgrade to remediate vulnerabilities", "HP synergy firmware upgrades", "Hardware faults Analysis / Troubleshooting", '""Keyring"" renewal on FI / License renewal for HXDP and Intersight', "SOP review VMware", "VxRail firmware upgrade", "vCenter patching", "SCG Upgrade", "Cloud Link upgrade", "vRealize Operations Manager Version upgrade.", "Reboot of VxRail Managers"],
+                    mappedPillars: ["change-rel", "sec-pos", "self-heal"]
+                },
+                "Operational Tasks": {
+                    items: ["Manual Incident dashboard monitoring and meet response SLA for P1 & P2", "Hyper Care Monitoring for 6 weeks peak period in every year", "Vulnerability report assessment and remediation", "Adhoc vulnerability remediation", "Server registration / de-registration from Monitoring", "Vxrails not responding Alerts", "Appliance releated issues", "Vcenter related issues", "Vcenter services related issues", "SRM related issues", "Host vunarability validation", "backup related issues", "Host Upgrade", "Server shutdown", "Host Decommission", "add Servers to VRM folder", "Host license installation", "Add Servers to DMZ folder", "Taking snapshot Request", "Revert Snapshot request", "Server Deploy for testing purpose", "ADD datastore space", "vDisk Extension/Allocation", "CPU MEMORY upgrade request", "Reboot ESXi hosts (Entire VC)", "Vcenters upgrade", "ESXi upgrade to fix critical vulnerabilities.", "Upgrade VXrail hosts to fix critical vulnerabilities."],
+                    mappedPillars: ["obs-ai", "defect-dens", "self-heal", "change-rel"]
+                }
+            },
+            "AIX Systems": {
+                "System Management & Upgrades": {
+                    items: ["AIX upgrade activities across the region", "AIX software license upgrade", "IBM AIX PowerHA cluster upgrade", "SSL certificate renewal", "VIO upgrade activity", "HACMP Management and Test", "LPM Admistration & Maintenance", "LPM Configuration and Troubleshooting", "App updates / UPgrade", "Hardware Replacement", "VIO Update", "HMC Upgrade"],
+                    mappedPillars: ["change-rel", "self-heal"]
+                },
+                "Monitoring & Troubleshooting": {
+                    items: ["Agent not working", "Service restart", "AIX Server Health Checks", "Process not running", "LVM ailability issue", "System reboot alert", "CPU Utilization alert", "Providing RCA including P3", "AIX High CPU Utilization", "AIX Volume Cleanup", "AIX Service Restart", "AIX services check", "Volume not available alert", "Ad-Hoc incident", "LVM Filesystem monitoring", "Sys Log checks", "Robot testing alert"],
+                    mappedPillars: ["obs-ai", "defect-dens", "self-heal"]
+                },
+                "Operational Tasks": {
+                    items: ["Runbook Updation", "Validating Gold Standard Documents", "Ad-Hoc AIX Service request", "Reboot required", "AIX Patching Preprattion and Analysis", "AIX Patching", "adhoc AIX Kernel Patching", "AIX Security Patching", "Runbook/Confluence Update", "LPAR mainyenence", "Adhoc LPAR Config Chec", "RBAC Security related request", "Ad-Hoc Service Conigs"],
+                    mappedPillars: ["mod-proc", "change-rel", "sec-pos"]
+                }
+            },
+            "Storage Systems": {
+                "Provisioning & Management": {
+                    items: ["Storage Health checks for all the devices", "Storage Allocation for a Existing SAN Server", "Storage Allocation for a New SAN Server", "Mapping of SAN Volumes to Host Sets in case of Sharing Volumes", "Addition of Volumes - Adding the Softlinks , Creation of Directories under respective storage array path for the backup host.", "Storage Expansion on SAN Volume", "Zoning of new SAN Host in Cisco CORE MDS Switches.", "Addition of Volumes to PP Configuration as per the application team request for Replication purpose.", "Creation of SD Sheets for the Host.", "Partial Reclamation - Removal of volume from the host.", "Full Reclamation of Storage and Decommission of the host.", "Storage De-Allocation for a SAN Server", "Zoning Removal for SAN Server", "Replication setup for new volumes", "De-Replication for a volume.", "Storage provisioning"],
+                    mappedPillars: ["change-rel", "fin-man"]
+                },
+                "Health, Performance & Reporting": {
+                    items: ["Storage devices Health checks", "Storage devices performance checks", "Storage Capacity planning", "Monthly capacity planning report", "Storage capacity planning Dashboard", "Switch health check", "Weekly capacity check report", "Monthly major achivements - Highlights & Lowlights report", "Storage Global Deck preparation", "Nasuni Charge Back", "Storage Chargeback", "Monthly ANF Detail", "Switch Report"],
+                    mappedPillars: ["obs-ai", "fin-man", "defect-dens"]
+                },
+                "Operational & Vendor Management": {
+                    items: ["Vendor Case management for Hardware failures.", "Hardware replacement co-ordination with vendor.", "Storage devices microcode/firmware upgrade planning and implementation.", "Switch firmware upgrade planning and implementation", "Daily Ticket monitoring", "Daily standup calls", "Weekly Capacity call", "Weekly storage internal call", "Weekly Backup call", "Weekly client call", "Pre-CAB call", "Multi CAB meeting for change", "NASUNI Monthly call", "Storage pre/post health validation after patching", "Storage Vulnerability remediation", "Daily GBT Operational Meeting", "Weekly GBT - Storage and Backup meeting", "Weekly Europe operational committee", "Weekly GBT operational committee", "Weekly AMER operational committee", "Monthly Europe operational committee", "Monthly GBT operational committee", "Monthly AMER operational committee", "Monthly APAC operational committee", "NASUNI - adhoc requests or incidents", "ANF - adhoc requests or incidents", "NAS DPLI & DPGP infrastructure : transfer of RUN activities to Accenture", "Risk Analysis", "CV AMER capacity pool size adjustment for backup copy job"],
+                    mappedPillars: ["mod-proc", "sec-pos", "self-heal"]
+                }
+            },
+            "Backup Systems": {
+                "Core Backup Operations": {
+                    items: ["Backup moniotoring", "Backup devices Health check", "Email monitoring", "Daily backup report", "Test restore", "Backup validation", "Configuring Golden backup", "Deletion of decom server", "Backup Configuration", "Restoration", "Adhoc backup"],
+                    mappedPillars: ["self-heal", "defect-dens"]
+                },
+                "Infrastructure & Maintenance": {
+                    items: ["Commcell and Media Agent version/Firmware upgrade", "Tape library monthly audit report", "Tape library firmware upgrade", "Drive space issue", "CPU utilization issue in Backup servers", "Memory Utilization issue in Backup servers", "Backup servers patching", "Tape library Upgrade", "OS upgrade for Backup servers", "Cybernatics replication configuration", "Live sync replication configuration"],
+                    mappedPillars: ["change-rel", "sec-pos"]
+                },
+                "Process, Reporting & Compliance": {
+                    items: ["Ticket Monitoring", "Billing Report", "Daily stand-up call", "Pre-CAB call", "CAB call", "Weekly Backup call", "Weekly ticket review call", "Weekly internal review call", "Capcity report Client review call", "SOX Audit for Backup", "KT to new Joiners", "Vulnerability call", "Kenna Dashboard check for open Vulnerability", "Daily Ticket review call", "Bi-weekly Ticket reduction call", "Manual Incident dashboard monitoring and meet response SLA for P1 & P2", "Firewall request", "Sharing backup availabality", "Alert Supress while upgrade/Patching", "AMM Internal Meeting", "AMM client Meeting", "Vendor Followup for the AMM Readiness", "New joiner Onboarding and access provisioning", "Volumes/shares validation with users", "Backup retention validation with users"],
+                    mappedPillars: ["mod-proc", "obs-ai", "fin-man"]
+                }
+            },
+            "Database Systems": {
+                 "Monitoring, Reporting & Administration": {
+                    items: ["Review of Database Health Check Oracle with Automated Procedure", "Database Health Check MSSQL with Automated Procedure", "Capacity Report Oracle", "Capacity Report MSSQL", "SOX Audit for Oracle Database( TEMPOPRD)", "Non SOX Audit for Oracle Databases", "Non SOX Audit for MSSQL Database", "Non SOX Audit for MYSQL Database(2 Instance)", "Annual Audit for CICR Database", "Raising eDBA request for SU login in Oracle CICR database", "SU and DDL Audit for Oracle CICR DB", "Half Yearly USERID Baseline for Oracle CICR database", "Nagios setup for RDS instances", "RDS user management", "RDS reboot jobs", "DB Access Request"],
+                    mappedPillars: ["obs-ai", "sec-pos", "mod-proc"]
+                },
+                "Structural & Storage Management": {
+                    items: ["Capacity planning - DB space, disk space, and temporary space management", "Database object structural management", "Maintain physical database layout", "RDS Storage management"],
+                    mappedPillars: ["self-heal", "fin-man"]
+                },
+                "Patch & Release Management": {
+                    items: ["Monitor & Identify Technical Database Patches", "Participate in Change / Release Process", "Create & Maintain Patch Reports", "Deploy patch in test/stage environment and test patch impact", "SQL server reboot"],
+                    mappedPillars: ["change-rel", "sec-pos"]
+                },
+                 "Backup & Recovery": {
+                    items: ["Monitor Database Backups", "Participate in Recovery Drills", "RDS Snapshot copy to cross accounts", "RDS Snapshot restores and test as part of restore drill"],
+                    mappedPillars: ["self-heal", "defect-dens"]
+                },
+                "Engineering & Performance": {
+                    items: ["Qualify database ticket directly routed to Level 3", "Problem Investigation & Diagnosis", "DB Batch job failure", "High CPU utilization on RDS", "SQL Service not running", "High Memory utilization on RDS", "Nagios Connection Timeout"],
+                    mappedPillars: ["defect-dens", "obs-ai"]
+                },
+                 "Process & Collaboration": {
+                    items: ["Internal meeting with Client", "PRE-CAB calls for change", "change creation and review", "Problem management call with Client", "Capacity Call", "Vulnerability call", "Kenna Dashboard check for open Vulnerability", "Oracle OEM configuraion", "Daily Ticket reduction call", "Multi CAB meeting for change", "Vendor Case management", "Manual Incident dashboard monitoring and meet response SLA for P1 & P2", "Vulnerability report assessment and remediation"],
+                    mappedPillars: ["mod-proc"]
+                }
+            },
+            "Middleware Systems": {
+                "Application Server Management": {
+                    items: ["Apache Tomcat - Informational Request and Instructional-based Request /Services restart", "Apache Tomcat Certificate Renewal and Troubleshooting", "Middleware Services - JBoss - Service Request", "Pega Server Request Restart", "Service Start Stop and Restart", "Tomcat Installation", "Tomcat Configuration", "Jboss Installation", "Jboss Configuration", "IBM websphere Installtion", "IBM websphere Configuration", "MDM Installation", "MDM Configuration"],
+                    mappedPillars: ["change-rel", "self-heal"]
+                },
+                "Integration & Messaging": {
+                    items: ["MQ - Clear & Backup Queues", "MQ - Configuration", "MQ - How Do I Form", "MQ - Something is Broken", "Elix Cluster Configuration"],
+                    mappedPillars: ["self-heal", "defect-dens"]
+                },
+                "Deployment & Configuration": {
+                    items: ["Application/Service Decommission Process", "Certificate Renewal Details From Venafi", "Deployment Of War/ Bar/ Ear Files", "LMI Infrastructure Request", "Retire Or Renew Certificate", "Elixpedia Configuration", "Elixpedia Upgradation", "Elastic serach Upgradation", "Task manager Configuration", "Persona web UI Fix Pack"],
+                    mappedPillars: ["devops", "change-rel"]
+                },
+                "Monitoring & Health": {
+                    items: ["Health checkup", "System Monitoring", "Application Monitoring", "Vulnerability Remediation", "Disk Space", "CPU Utilization", "Memory Utilization"],
+                    mappedPillars: ["obs-ai", "sec-pos"]
+                },
+                 "Process & Collaboration": {
+                    items: ["Daily Backlog Call", "Daily Internal Work Review", "Weekly VIT Status Connect call", "Weekly TVM Call", "Weekly EMEA Mars Connect", "Elixpedia Weekly Connect", "DRP Follow up automation Call", "Weekly Change Call", "Internal Cab Call", "Weekly Europe Service Delivery Review Call", "Weekly EMEA Cab", "Weekly Amer Cab", "Weekly APAC Cab", "Weekly OPS&FIN Cab", "Weekly Global Cab", "Weekly APAC Service Delivery Review", "Weekly Travel Retail Cab", "Weekly Problem Committee meeting"],
+                    mappedPillars: ["mod-proc"]
+                }
+            },
+            "Batch Ops": {
+                "Job Scheduling (Control-M)": {
+                    items: ["Job Schedluing / Control M", "Control-M Operations", "ControlM Agent installation", "ControlM Agent configuration", "ControlM EM Server installation", "ControlM EM Server configuration", "ControlM Server installation", "ControlM Server configuration", "Active Job File", "AJF waiting for instruction/Job Hold", "AJF job schedule deletion", "AJF Add Schedule", "Control-M user daily Checks", "Analysis of the ctmlog report mails", "Control-M daily Checks", "Creating/Updating EM DOC Checks"],
+                    mappedPillars: ["mod-proc", "change-rel"]
+                },
+                "Job Scheduling (SAP)": {
+                    items: ["Job Creation in SAP using SM36", "SAP Weekly Failure Check", "Job Modification in SAP using SM37- PROGRAM", "Job Modification in SAP using SM37- Step Addition and Validation", "Job Modification in SAP using SM37- Creating Event Triggered Jobs", "SAP Ready State Job Check"],
+                    mappedPillars: ["mod-proc", "change-rel"]
+                },
+                "Monitoring & Error Handling": {
+                    items: ["Long Running Job Check", "ABEND/Failure Job Check", "Node not available check"],
+                    mappedPillars: ["obs-ai", "self-heal", "defect-dens"]
+                },
+                "Process & Collaboration": {
+                    items: ["Mon/Wed/Thur GDC Weeklt Review Calls with Tower Lead", "Everyday DMH Call", "AMM Calls", "Mass transport call", "SLA Reporting", "Number of jobs for monthly billing", "Access Request for New Resources", "Access Deletion Request for Roll-off Resources", "Year-end operation (Billing Job Suspension and resume, communications and follow up with all the stake holders)", "Preparation of calendar list, follow up with app team for calender dates and update in Control-M GUI."],
+                    mappedPillars: ["mod-proc", "fin-man"]
+                }
+            },
+            "Monitoring & Tools": {
+                "Monitoring Configuration": {
+                    items: ["Monitoring Blackout Request", "Monitoring Exception Request", "Request for monitoring request form", "Monitoring Service Exemption request", "Monitoring Deletion request", "General Inquiry about monitoring", "String exclusion from logfiles monitoring", "Monitoring Addition request", "Working on Unknown monitoring parameters"],
+                    mappedPillars: ["obs-ai", "change-rel"]
+                },
+                "Platform Health & Maintenance": {
+                    items: ["Monitoring Application upgradation", "Application validation during OS Patching", "Monitoring Host Validation", "Application backup", "Database upgrade", "Database maintainance", "Filesystem house keeping", "PAM Vault Account validation and updation"],
+                    mappedPillars: ["self-heal", "sec-pos"]
+                },
+                "Reporting & Process": {
+                    items: ["Extract and share Monthly Performance graphs", "Updating SOP", "Vulnerability report analysis", "Vendor Engagements", "Weekly operation calls", "Application Migrations", "Team Connect", "License Management", "Dormant User ID review", "Halfyearly User ID review", "PAM user onboarding request", "PAM user offboarding request", "Helix Queue Monitoring", "Preparation of WBS for Normal Medium Changes", "Preparation of Procedures for the changes step-by step plan for all Normal & Standard Changes", "Change Implementation Call with 4-eye Review.", "Taking Adhoc Snapshots for Application & Server", "New joiner Onboarding and access provisioning", "Offboarding and access revoking request", "Password Rotation for accounts both Local and Priveledged - in every 3 months", "Preparation of Bi-weekly Report", "Preparation of ARB Report", "Preparation & Updation of Organization Charts & Esclation Matrix"],
+                    mappedPillars: ["mod-proc", "obs-ai", "fin-man"]
+                }
+            },
+            "Workplace Services": {
+                "Endpoint & Image Management": {
+                    items: ["Image Management - OS and Apps Update", "Image Management - Testing", "Image Management - HW drivers", "Image Management - New Hardware onboarding", "Security- Endpoint Baseline", "Evergreening"],
+                    mappedPillars: ["devops", "change-rel", "sec-pos"]
+                },
+                "Patch & Application Management": {
+                    items: ["Patch Management - Patch Analysing", "Patch Management - Download, Deploy and Roll out", "Patch Management - Group/Collection Maintenance", "Patch Management - Reporting", "Patch Management - Remediation of failed machines", "App Packaging - Packaging PRF Request", "App Packaging - Packaging new Apps"],
+                    mappedPillars: ["change-rel", "devops"]
+                },
+                "Infrastructure & User Services": {
+                    items: ["Infrastructure Maintenance", "User services- OneDrive", "User services- Exchange Online", "User services- Sharepoint", "User services- Teams", "User services- Yammer", "User services- O365 Apps", "User services- PowerBI"],
+                    mappedPillars: ["self-heal", "mod-proc"]
+                }
+            },
+            "Service Management": {
+                "Incident & Problem Management": {
+                    items: ["Breach analysis Incident/WO", "Incident management deck", "PIR analysis report", "PIR call", "Problem management deck", "Problem management meeting", "RCA follow up", "Re-assignment analysis report"],
+                    mappedPillars: ["defect-dens", "self-heal"]
+                },
+                "Change & Release Management": {
+                    items: ["CAB agenda discussion with Vel", "CAB Agenda report", "CAB Attendance report", "CAB-call", "Change Audit", "Change Categorization", "Change Completion status report", "Change management Refresher session", "Change PIR deck", "Change report to Sony(Draft)", "Change report to Sony(Final)", "Change SLA excemption call", "Changes management deck", "Release call"],
+                    mappedPillars: ["change-rel", "mod-proc"]
+                },
+                "Reporting & Governance": {
+                    items: ["AMM Activity", "Capacity report", "CI validation", "CSI meeting", "D-STAR report", "Daily ops call", "DCO connect", "Deck preparation", "Governance call", "Infra Report", "Internal team meeting", "Inventory validation", "KEDB call", "KEDB review", "Monthly report to client", "Ops Governance meeting", "Service management report", "SLA report", "Technical review call", "Technical review deck", "WBS Report", "Weekly CAB Call US region", "Weekly Multi CAB Call multi region", 'Weekly My Wizard(AM, EU and AP)', "Weekly Ops Deck"],
+                    mappedPillars: ["obs-ai", "fin-man"]
+                }
+            },
+            "Network Services": {
+                 "LAN/WAN Operations": {
+                    items: ["LAN Basic Troubleshooting", "LAN L2 Change/Tshoot", "LAN Advance Change/Tshoot", "LAN Major Tshoot", "WAN Basic Troubleshooting", "WAN L2 Change/Tshoot", "WAN Advance Change/Tshoot", "WAN Major Tshoot"],
+                    mappedPillars: ["self-heal", "defect-dens"]
+                },
+                "Network Services (DNS/DHCP/LB)": {
+                    items: ["Network Monitoring (All Domains)", "Load Balancer Config Change", "Load Balancer Troubleshooting", "DNS/DHCP Scope Update", "DNS Record Add/Delete", "ASA Firewall rule addtion/deletion/modification", "Checkpoint firewall rule addition/deletion/modification"],
+                    mappedPillars: ["change-rel", "self-heal"]
+                },
+                "Voice & Collaboration": {
+                    items: ["Creation of user profile on CUCM", "Deletion of user profile on CUCM", "Modification of user profile on CUCM", "User association with the devices", "Voicemail box creation", "Voicemail box deletion", "Voicemail box modification", "Creation of jabber chat/MRA profile", "Hide/Unhide Phone Number (CLIR)", "Change Jabber/Webex Display Name", "Assign feature to user like extension mobility", "Change user", "Addition/Deletion of Analog phones", "Addition/Removal of Fax profile", "Monitoring of the alerts generated for voice infra", "Addition/Deletion of Video devices", "Movement of videodevices"],
+                    mappedPillars: ["change-rel", "mod-proc"]
+                },
+                "Security, Compliance & Process": {
+                    items: ["Weekely Health Check of Core devices", "Monthly device compliance audit", "Working with provider for any ISDN PRI/SIP trunk issues down issue", "Troubleshooting on user raised incidents(p4,p3)", "Trobleshooting on P1, p2 incidents", "Change review for any infrastrucure changes", "Execution of rk3 changes", "Execution of rk2, rk1 changes", "Certificate renewal for the voice infrastructure devices", "IOS upgrade for the voice gateways/cube's", "Prepration of reports for the customer like incidents, changes and SR", "Working with cisco tac for any critcal issues", "Peforming yearly failover test for the voice infrastructure"],
+                    mappedPillars: ["sec-pos", "change-rel", "obs-ai"]
+                }
+            },
+            "Service Desk": {
+                "Incident Management": {
+                    items: ["Log incident", "Categorize and Prioritize Incident", "Incident Investigation and Diagnosis", "Incident Resolution and Recovery", "Escalate Incidents to relevant support teams", "Communicate with users regarding incident status", "Close Incidents and confirm user satisfaction"],
+                    mappedPillars: ["self-heal", "defect-dens", "mod-proc"]
+                },
+                "Request Fulfillment": {
+                    items: ["Log Service Request", "Categorize and Prioritize Service Request", "Fulfill Standard Service Requests (e.g., Password Reset, Software Installation)", "Route non-standard requests to appropriate teams", "Provide user access and permissions", "Manage hardware and software requests"],
+                    mappedPillars: ["self-heal", "mod-proc", "change-rel"]
+                },
+                "Knowledge & Communication": {
+                    items: ["Create and maintain knowledge base articles", "Provide self-service support options to users", "Proactively communicate service outages and updates", "Conduct user satisfaction surveys"],
+                    mappedPillars: ["obs-ai"]
+                }
+            }
+        };
+
+        const levelsData = [
+            { 
+                level: 0, 
+                name: "Core", 
+                color: "bg-slate-500",
+                description: "Operations are entirely manual. Teams respond to issues only after they occur, with high levels of toil and inconsistent processes. There is little to no monitoring or automation.",
+                details: "Manual, reactive, and high toil. Basic operations with no formal SRE practices.",
+                analogy: "<strong>Firefighter:</strong> Reacts only when there’s a fire."
+            },
+            { 
+                level: 1, 
+                name: "Established", 
+                color: "bg-purple-400",
+                description: "Processes are documented with SOPs and runbooks. Basic monitoring is in place, and simple, rule-based automation (scripts, RPA) is used for repetitive, known tasks.",
+                details: "Structured SOPs, RPAs, Rule-Based Automation, Insights Driven, Chatbot, GenAI.",
+                analogy: "<strong>Tower-Controlled Takeoff:</strong> Structured SOPs, dashboards, and RPAs help lift off."
+            },
+            { 
+                level: 2, 
+                name: "Adaptive", 
+                color: "bg-purple-500",
+                description: "Automation becomes more sophisticated. Systems use anomaly detection to identify potential issues, triggering automated runbooks. The focus shifts to proactively preventing incidents.",
+                details: "Agent-led systems. Agentic systems support triage, reviews, and knowledge evolution.",
+                analogy: "<strong>Autopilot Engaged:</strong> GenAI agents assist in-flight tasks like triage and fixes."
+            },
+            { 
+                level: 3, 
+                name: "Autonomous", 
+                color: "bg-purple-600",
+                description: "AIOps and machine learning predict potential issues before they impact services. Self-healing capabilities are widespread, automatically resolving predicted problems without human intervention.",
+                details: "Emergent, reflexive AI systems. Systems are self-healing, and agents enforce policies and react in real time.",
+                analogy: "<strong>AI Co-Pilot:</strong> Systems navigate intelligently with agents."
+            },
+            { 
+                level: 4, 
+                name: "Disruptive", 
+                color: "bg-indigo-700",
+                description: "Operations are managed by autonomous AI agents that can reason, learn, and adapt. They resolve complex, unknown issues and also optimize, secure, and re-architect systems to meet business outcomes.",
+                details: "Agentic collaboration (collective AI). AI redefines, redesigns, and optimizes its own mission.",
+                analogy: "<strong>Galactic Explorer:</strong> AI reshapes its own mission, charts new paths, and avoids turbulence."
+            }
+        ];
+        
+        const matrixData = {
+            "fin-man": ["No FinOps", "Partial FinOps", "FinOps", "Full Stack FinOps", "Revenue Based FinOps"],
+            "sec-pos": ["No SPM", "Partial SPM", "SPM", "Full Stack SPM", "Dynamic App Security"],
+            "mod-proc": ["Waterfall", "Agile", "SRE", "Platform Engineering", "Agentic SRE"],
+            "defect-dens": ["Reactive Problem Mgmt", "Proactive Problem Mgmt", "Predictive Problem Mgmt", "Cognitive Problem Mgmt", "Self-Healing Systems"],
+            "self-heal": ["Manual Triage", "Automated Runbooks", "Event Correlation", "Self-Healing Scripts", "AIOps Driven Resolution"],
+            "change-rel": ["Manual Changes", "Automated Patching", "Change Risk Prediction", "Blue/Green Releases", "Dynamic Workload Mgmt"],
+            "devops": ["No CI/CD", "CI", "CI/CD", "DevSecOps", "AIOps in CI/CD"],
+            "obs-ai": ["Basic Monitoring", "Centralized Logging", "Observability (L,M,T)", "AIOps", "Predictive Analytics"]
+        };
+        
+        const steps = [
+            { id: 'home', name: 'Home' },
+            { id: 'summary', name: 'Executive Summary' },
+            { id: 'responder-details', name: 'Responder Details' },
+            { id: 'pillars', name: 'Core Pillars' },
+            { id: 'levels', name: 'Maturity Levels' },
+            { id: 'selection', name: 'Tower Selection' },
+            { id: 'calculator', name: 'Maturity Assessment' },
+            { id: 'assessment', name: 'Maturity Report' },
+        ];
+        let currentStepIndex = 0;
+        
+        let granularItemAssessments = {};
+        let towerPillarScores = {};
+        let selectedTowers = []; // Start with no towers selected
+        let chartInstances = [];
+        let towerAssessmentStatus = {};
+        let currentlySelectedTower = null;
+
+
+        // --- INITIALIZATION ---
+        function init() {
+            populatePillars();
+            populateLevels();
+            populateMatrix();
+            populateStepIndicator();
+            initializeDataStores();
+            populateTowerSelection();
+            renderSummarySliders();
+            attachEventListeners();
+            navigateToStep(0);
+        }
+
+        function initializeDataStores() {
+            allTowers.forEach(tower => {
+                towerAssessmentStatus[tower] = false;
+                granularItemAssessments[tower] = {};
+                towerPillarScores[tower] = {};
+
+                const towerData = granularTowerCatalogData[tower];
+                if (towerData) {
+                    for (const groupName in towerData) {
+                        towerData[groupName].items.forEach(itemName => {
+                            granularItemAssessments[tower][itemName] = 0; // Default to level 0
+                        });
+                    }
+                }
+                
+                pillarsData.forEach(pillar => {
+                    towerPillarScores[tower][pillar.id] = 0;
+                });
+            });
+        }
+        
+        function populatePillars() {
+            const pillarsContainer = document.querySelector('#pillars .grid');
+            pillarsContainer.innerHTML = '';
+            pillarsData.forEach(pillar => {
+                const card = document.createElement('div');
+                card.className = 'pillar-card bg-slate-50 border border-slate-200 rounded-xl p-6 flex flex-col h-full';
+                card.innerHTML = `
+                    <div class="flex items-start gap-4">
+                         <div>
+                             <h3 class="text-lg font-semibold text-slate-800">${pillar.name}</h3>
+                             <span class="text-sm font-medium text-slate-500">Weight: ${pillar.weight}%</span>
+                             <p class="text-sm text-slate-600 mt-2">${pillar.definition}</p>
+                         </div>
+                    </div>
+                `;
+                pillarsContainer.appendChild(card);
+            });
+        }
+        
+        function populateLevels() {
+            const levelsContainer = document.querySelector('#levels .relative');
+            levelsContainer.innerHTML = '';
+            levelsData.forEach(level => {
+                 const item = document.createElement('div');
+                 item.className = 'level-item relative pb-10';
+                 item.innerHTML = `
+                    <div class="level-circle absolute left-0 top-0 flex items-center justify-center w-10 h-10 rounded-full ${level.color}">
+                        <span class="text-white font-bold text-lg">${level.level}</span>
+                    </div>
+                    <div class="ml-16 bg-slate-50 border border-slate-200 rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-slate-800 -mt-1">${level.name}</h3>
+                        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 text-sm text-slate-600 leading-6">
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Description</h4>
+                                <p>${level.description}</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Details</h4>
+                                <p>${level.details}</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-800 mb-2">Analogy</h4>
+                                <p class="italic">${level.analogy}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                levelsContainer.appendChild(item);
+            });
+        }
+
+        function populateMatrix() {
+            const summaryContainer = document.getElementById('summary');
+            let headerHtml = `
+                <div class="p-3 text-left font-bold text-slate-900 bg-slate-200 sticky left-0 z-10">Pillar</div>
+                ${levelsData.map(level => `
+                    <div class="p-3 text-center font-bold text-white ${level.color}">
+                        <span class="block text-lg">${level.level}</span>
+                        <span class="block text-xs sm:text-sm">${level.name}</span>
+                    </div>
+                `).join('')}
+            `;
+            let dataHtml = pillarsData.map(pillar => {
+                let pillarRow = `<div class="p-3 font-semibold text-slate-800 bg-slate-100 flex items-center sticky left-0 z-10">${pillar.name}</div>`;
+                let cellRows = matrixData[pillar.id].map(text => `
+                    <div class="p-3 text-center text-slate-700 bg-white flex items-center justify-center">
+                        ${text}
+                    </div>
+                `).join('');
+                return pillarRow + cellRows;
+            }).join('');
+
+            const gridHtml = `
+                <div class="mt-12">
+                    <h3 class="text-2xl font-semibold text-slate-800 mb-6 text-center">Framework Matrix At-a-Glance</h3>
+                    <div class="overflow-x-auto rounded-lg border border-slate-300 shadow-md">
+                        <div class="grid grid-cols-[minmax(180px,_1.5fr)_repeat(5,_minmax(140px,_1fr))] bg-slate-300 text-xs sm:text-sm" style="gap: 1px;">
+                            ${headerHtml}
+                            ${dataHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+            summaryContainer.insertAdjacentHTML('beforeend', gridHtml);
+        }
+        
+        function populateStepIndicator() {
+            const indicator = document.getElementById('step-indicator');
+            indicator.innerHTML = '';
+            steps.forEach((step, index) => {
+                const isLast = index === steps.length - 1;
+                const item = document.createElement('div');
+                item.className = 'step-item flex items-center';
+                item.dataset.stepIndex = index;
+                item.style.flexShrink = '1';
+                item.style.minWidth = '0';
+                if (!isLast) {
+                    item.style.flexGrow = '1';
+                }
+                const circleText = index === 0 ? 'H' : index;
+
+                item.innerHTML = `
+                    <div class="step-circle flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border-2 border-gray-300 bg-white text-gray-500 font-bold">${circleText}</div>
+                    <div class="step-text ml-2 text-sm text-gray-500 hidden md:block truncate">${step.name}</div>
+                    ${!isLast ? '<div class="flex-1 border-t-2 border-gray-300 mx-2 md:mx-4"></div>' : ''}
+                `;
+                indicator.appendChild(item);
+            });
+        }
+
+
+        function setResponderDefaults() {
+            document.getElementById('assessment-date').value = new Date().toISOString().split('T')[0];
+        }
+
+        function populateTowerSelection() {
+            const grid = document.getElementById('tower-selection-grid');
+            grid.innerHTML = '';
+            allTowers.forEach(tower => {
+                const div = document.createElement('div');
+                div.className = 'relative flex items-start';
+                div.innerHTML = `
+                    <div class="flex h-6 items-center">
+                        <input id="tower-select-${tower.replace(/\s+/g, '-')}" name="tower-selection" type="checkbox" value="${tower}" class="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-600">
+                    </div>
+                    <div class="ml-3 text-sm leading-6">
+                        <label for="tower-select-${tower.replace(/\s+/g, '-')}" class="font-medium text-gray-900">${tower}</label>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function renderTowerTabs() {
+            const container = document.getElementById('tower-assessment-list-container');
+            container.innerHTML = '';
+            const tabContainer = document.createElement('div');
+            tabContainer.className = 'flex flex-wrap gap-2';
+            
+            if (selectedTowers.length === 0) {
+                 container.innerHTML = '<p class="text-center text-gray-500">No towers were selected. Please go back to the "Tower Selection" step.</p>';
+                 return;
+            }
+
+            selectedTowers.forEach(towerName => {
+                const isActive = towerName === currentlySelectedTower;
+                const isCompleted = towerAssessmentStatus[towerName];
+
+                const button = document.createElement('button');
+                button.textContent = towerName;
+                button.dataset.tower = towerName;
+                button.className = `flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    isActive 
+                        ? 'bg-purple-600 text-white' 
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`;
+                
+                const statusIndicator = document.createElement('span');
+                statusIndicator.className = `w-3 h-3 rounded-full ${isCompleted ? 'bg-green-400' : 'bg-slate-400'}`;
+                statusIndicator.title = isCompleted ? 'Completed' : 'Pending';
+
+                button.prepend(statusIndicator);
+                tabContainer.appendChild(button);
+            });
+            container.appendChild(tabContainer);
+        }
+
+        function selectTowerForAssessment(towerName) {
+            currentlySelectedTower = towerName;
+            towerAssessmentStatus[towerName] = true; // Mark as reviewed/clicked
+            renderTowerTabs(); // Re-render to show active state and updated status
+            renderCatalogAssessmentUI(towerName);
+            updateSummary(towerName);
+        }
+
+
+        function renderCatalogAssessmentUI(towerName) {
+            const questionsContainer = document.getElementById('assessment-questions');
+            if (!towerName) {
+                questionsContainer.innerHTML = '<p class="text-center text-gray-500">Please select a tower from the list above to begin.</p>';
+                return;
+            }
+            questionsContainer.innerHTML = '';
+            const towerData = granularTowerCatalogData[towerName];
+
+            if (!towerData) {
+                questionsContainer.innerHTML = `<p>No granular catalog data defined for ${towerName}.</p>`;
+                return;
+            }
+            
+            for (const groupName in towerData) {
+                const group = towerData[groupName];
+                const details = document.createElement('details');
+                details.className = 'bg-white border rounded-lg overflow-hidden';
+                details.open = true;
+
+                details.innerHTML = `
+                    <summary class="p-4 font-semibold text-lg bg-slate-50 flex justify-between items-center cursor-pointer">${groupName}</summary>
+                    <div class="p-4 space-y-6">
+                        ${group.items.map((itemName, index) => {
+                            const escapedItemName = itemName.replace(/"/g, '&quot;');
+                            return `
+                            <fieldset class="border-t pt-4">
+                                <legend class="text-sm font-medium text-gray-800 mb-2">${index + 1}. ${itemName}</legend>
+                                <div class="flex flex-wrap gap-x-6 gap-y-2">
+                                    ${levelsData.map(level => `
+                                        <div class="flex items-center">
+                                            <input id="${towerName}-${itemName.replace(/[^a-zA-Z0-9]/g, "")}-${level.level}" name="${escapedItemName}" type="radio" value="${level.level}" class="h-4 w-4 text-purple-600 border-gray-300 focus:ring-purple-500">
+                                            <label for="${towerName}-${itemName.replace(/[^a-zA-Z0-9]/g, "")}-${level.level}" class="ml-2 block text-sm font-medium text-gray-700">${level.level}</label>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </fieldset>
+                        `}).join('')}
+                    </div>
+                `;
+                questionsContainer.appendChild(details);
+            }
+            loadGranularAssessmentsForTower(towerName);
+        }
+        
+        function renderSummarySliders() {
+            const slidersContainer = document.getElementById('summary-sliders');
+            slidersContainer.innerHTML = '';
+            pillarsData.forEach(pillar => {
+                const sliderGroup = document.createElement('div');
+                sliderGroup.innerHTML = `
+                     <div>
+                        <label for="summary-slider-${pillar.id}" class="flex justify-between items-center text-sm font-medium text-gray-700 mb-1">
+                            <span>${pillar.name}</span>
+                            <span id="summary-value-${pillar.id}" class="font-bold text-purple-600 text-lg">0</span>
+                        </label>
+                        <input type="range" id="summary-slider-${pillar.id}" name="summary-slider-${pillar.id}" min="0" max="4" value="0" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none" disabled>
+                    </div>
+                `;
+                slidersContainer.appendChild(sliderGroup);
+            });
+        }
+        
+        function attachEventListeners() {
+            document.getElementById('back-button').addEventListener('click', () => navigateToStep(currentStepIndex - 1));
+            document.getElementById('next-button').addEventListener('click', handleNextClick);
+            document.getElementById('begin-survey-button').addEventListener('click', () => navigateToStep(1));
+            
+            document.getElementById('select-all-towers').addEventListener('click', () => {
+                document.querySelectorAll('input[name="tower-selection"]').forEach(cb => cb.checked = true);
+            });
+
+            document.getElementById('deselect-all-towers').addEventListener('click', () => {
+                document.querySelectorAll('input[name="tower-selection"]').forEach(cb => cb.checked = false);
+            });
+
+            document.getElementById('cancel-submission-button').addEventListener('click', hideConfirmationModal);
+            document.getElementById('confirm-submission-button').addEventListener('click', saveAndSubmitAssessment);
+            document.getElementById('export-pdf-button').addEventListener('click', exportToPdf);
+            document.getElementById('close-incomplete-modal-button').addEventListener('click', hideIncompleteModal);
+
+
+            document.getElementById('tower-assessment-list-container').addEventListener('click', (e) => {
+                 if(e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                    const towerName = e.target.closest('button').dataset.tower;
+                    selectTowerForAssessment(towerName);
+                }
+            });
+
+
+            document.getElementById('assessment-questions').addEventListener('change', event => {
+                if (event.target.type === 'radio') {
+                    const granularItemName = event.target.name;
+                    const level = parseInt(event.target.value);
+                    granularItemAssessments[currentlySelectedTower][granularItemName] = level;
+                    updateSummary(currentlySelectedTower);
+                }
+            });
+
+            document.getElementById('step-indicator').addEventListener('click', (e) => {
+                const stepItem = e.target.closest('.step-item');
+                if (stepItem && stepItem.classList.contains('completed')) {
+                    const index = parseInt(stepItem.dataset.stepIndex, 10);
+                    navigateToStep(index);
+                }
+            });
+        }
+
+        // --- NAVIGATION LOGIC ---
+        function navigateToStep(index) {
+            if (index < 0 || index >= steps.length) return;
+            currentStepIndex = index;
+
+            // Hide all panes
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
+            // Show current pane
+            document.getElementById(steps[index].id).classList.remove('hidden');
+
+            const stepNav = document.getElementById('step-nav-container');
+            const navButtons = document.getElementById('nav-buttons-container');
+            if (index === 0) { // Home screen
+                stepNav.classList.add('hidden');
+                navButtons.classList.add('hidden');
+            } else {
+                stepNav.classList.remove('hidden');
+                navButtons.classList.remove('hidden');
+            }
+
+            // Update step indicator
+            const stepItems = document.querySelectorAll('.step-item');
+            stepItems.forEach((item, i) => {
+                item.classList.remove('active', 'completed');
+                if (i < index) {
+                    item.classList.add('completed');
+                } else if (i === index) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Update button states and text
+            const backButton = document.getElementById('back-button');
+            const nextButton = document.getElementById('next-button');
+            backButton.style.display = index === 1 ? 'none' : 'inline-flex'; // No back button on first step after home
+            nextButton.style.display = index === steps.length - 1 ? 'none' : 'inline-flex';
+
+            if (steps[index].id === 'selection') {
+                nextButton.textContent = 'Confirm Selection & Proceed';
+            } else if (steps[index].id === 'calculator') {
+                nextButton.textContent = 'Submit & View Report';
+            } else {
+                nextButton.textContent = 'Next';
+            }
+             if(steps[index].id === 'assessment'){
+                updateDashboard();
+            }
+            if (steps[index].id === 'responder-details') {
+                setResponderDefaults();
+            }
+        }
+        
+        function handleNextClick() {
+            const currentStepId = steps[currentStepIndex].id;
+            
+            if (currentStepId === 'selection') {
+                selectedTowers = Array.from(document.querySelectorAll('input[name="tower-selection"]:checked')).map(cb => cb.value);
+                if(selectedTowers.length === 0){
+                    alert("Please select at least one tower to proceed.");
+                    return;
+                }
+                // Reset status for the new selection
+                Object.keys(towerAssessmentStatus).forEach(k => towerAssessmentStatus[k] = false);
+                renderTowerTabs();
+                selectTowerForAssessment(selectedTowers[0]);
+            } else if (currentStepId === 'calculator') {
+                const pendingTowers = selectedTowers.filter(tower => !towerAssessmentStatus[tower]);
+                
+                if (pendingTowers.length > 0) {
+                    showIncompleteModal(pendingTowers);
+                    return; // Block submission
+                }
+                showConfirmationModal();
+                return; // Don't navigate yet, wait for modal confirmation
+            }
+            
+            navigateToStep(currentStepIndex + 1);
+        }
+        
+        
+        // --- MODAL AND SUBMISSION LOGIC ---
+        function showIncompleteModal(pendingTowers) {
+            const list = document.getElementById('pending-towers-list');
+            list.innerHTML = ''; // Clear previous list
+            pendingTowers.forEach(tower => {
+                const li = document.createElement('li');
+                li.textContent = tower;
+                list.appendChild(li);
+            });
+            document.getElementById('incomplete-modal').classList.remove('hidden');
+        }
+
+        function hideIncompleteModal() {
+            document.getElementById('incomplete-modal').classList.add('hidden');
+        }
+
+        function showConfirmationModal() {
+            document.getElementById('confirmation-modal').classList.remove('hidden');
+        }
+
+        function hideConfirmationModal() {
+            document.getElementById('confirmation-modal').classList.add('hidden');
+        }
+        
+        function saveAndSubmitAssessment() {
+            hideConfirmationModal();
+
+            // 1. Generate and download raw data EXCEL
+            generateAndDownloadExcel();
+
+            // 2. Trigger email client
+            triggerEmail();
+
+            // 3. Navigate to the final report page
+            navigateToStep(currentStepIndex + 1);
+        }
+
+        function generateAndDownloadExcel() {
+            const responderDetails = {
+                "Engagement Name": document.getElementById('engagement-name').value,
+                "Project Team": document.getElementById('project-team').value,
+                "Delivery Lead": document.getElementById('delivery-lead').value,
+                "Service Delivery Manager": document.getElementById('sdm').value,
+                "Engagement MD": document.getElementById('engagement-md').value,
+                "Date of Assessment": document.getElementById('assessment-date').value
+            };
+
+            const assessmentDataForSheet = [];
+            const catalogMappingData = [];
+
+            selectedTowers.forEach(tower => {
+                const towerData = granularTowerCatalogData[tower];
+                if (towerData) {
+                    for (const groupName in towerData) {
+                        const group = towerData[groupName];
+                        catalogMappingData.push({
+                            "Service Tower": tower,
+                            "Catalog Group": groupName
+                        });
+                        group.items.forEach(itemName => {
+                            const level = granularItemAssessments[tower][itemName] || 0;
+                            (group.mappedPillars || []).forEach(pillarId => {
+                                const pillar = pillarsData.find(p => p.id === pillarId);
+                                if (pillar) {
+                                    assessmentDataForSheet.push({
+                                        ...responderDetails,
+                                        "Service Tower": tower,
+                                        "Catalog Group": groupName,
+                                        "Service Catalog": itemName,
+                                        "Core Pillar": pillar.name,
+                                        "Maturity Level": level,
+                                        "Pillar Weight": pillar.weight
+                                    });
+                                }
+                            });
+                        });
+                    }
+                }
+            });
+
+            const wb = XLSX.utils.book_new();
+            const wsData = XLSX.utils.json_to_sheet(assessmentDataForSheet, {header: [
+                "Engagement Name", "Project Team", "Delivery Lead", "Service Delivery Manager",
+                "Engagement MD", "Date of Assessment", "Service Tower", "Catalog Group", 
+                "Service Catalog", "Core Pillar", "Maturity Level", "Pillar Weight"
+            ]});
+            const wsMap = XLSX.utils.json_to_sheet(catalogMappingData);
+            
+            XLSX.utils.book_append_sheet(wb, wsData, "Assessment Data");
+            XLSX.utils.book_append_sheet(wb, wsMap, "Tower Catalog Reference");
+            
+            const engagementName = document.getElementById('engagement-name').value || 'Assessment';
+            const date = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `${engagementName}-Raw-Data-${date}.xlsx`);
+        }
+        
+        function triggerEmail() {
+            const recipient = "jason.penalosa@accenture.com";
+            const subject = "Automation Maturity Framework Survey";
+            const body = `
+Hello there!
+
+Please find the attached raw data from the Automation Maturity Assessment.
+
+This file contains the responder's details and their inputs for each selected service tower.
+
+**IMPORTANT:** Please attach the Excel file that was just downloaded to your computer before sending this email.
+
+Thank you.
+            `;
+
+            const mailtoLink = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = mailtoLink;
+        }
+
+
+        async function exportToPdf() {
+            const engagementName = document.getElementById('engagement-name').value || 'Assessment';
+            const date = new Date().toISOString().split('T')[0];
+            
+            const pdfExportContainer = document.createElement('div');
+            pdfExportContainer.style.padding = '2rem';
+
+            const headerClone = document.querySelector('header').cloneNode(true);
+            headerClone.style.marginBottom = '2rem';
+            pdfExportContainer.appendChild(headerClone);
+
+            const tabsToExport = ['responder-details', 'assessment'];
+
+            for (const tabId of tabsToExport) {
+                const contentClone = document.getElementById(tabId).cloneNode(true);
+                
+                if (tabId === 'assessment') {
+                    contentClone.style.pageBreakBefore = 'always';
+                }
+
+                if (tabId === 'assessment') {
+                    contentClone.querySelector('#export-pdf-button')?.remove();
+                    const canvasElements = contentClone.querySelectorAll('canvas');
+                    
+                    canvasElements.forEach(clonedCanvas => {
+                         const originalCanvasId = clonedCanvas.id;
+                         const chartInstance = chartInstances.find(c => c.canvas.id === originalCanvasId);
+                         if (chartInstance) {
+                            const img = document.createElement('img');
+                            img.src = chartInstance.toBase64Image();
+                            img.style.width = '100%';
+                            img.style.height = 'auto';
+                            img.style.marginTop = '1rem';
+                            clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+                         }
+                    });
+                }
+                
+                pdfExportContainer.appendChild(contentClone);
+            }
+            
+            const opt = {
+                margin: 0.5,
+                filename: `${engagementName}-Maturity-Report-${date}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            };
+
+            html2pdf().set(opt).from(pdfExportContainer).save();
+        }
+
+        function loadGranularAssessmentsForTower(towerName) {
+            const itemAssessments = granularItemAssessments[towerName];
+            if (!itemAssessments) return;
+            Object.keys(itemAssessments).forEach(itemName => {
+                const level = itemAssessments[itemName];
+                const escapedItemName = itemName.replace(/"/g, '&quot;');
+                const radioSelector = `input[name="${escapedItemName}"][value="${level}"]`;
+                const radio = document.querySelector(radioSelector);
+                if (radio) {
+                    radio.checked = true;
+                }
+            });
+        }
+
+        function calculatePillarScores(towerName) {
+            pillarsData.forEach(p => { towerPillarScores[towerName][p.id] = 0; });
+
+            const towerData = granularTowerCatalogData[towerName];
+            const itemScores = granularItemAssessments[towerName];
+            
+            if (!towerData || !itemScores) {
+                return; 
+            }
+
+            const pillarContributions = {};
+            pillarsData.forEach(p => { pillarContributions[p.id] = { total: 0, count: 0 }; });
+            
+            let totalItemScore = 0;
+            let totalItemCount = 0;
+
+            for (const groupName in towerData) {
+                const group = towerData[groupName];
+                
+                group.items.forEach(itemName => {
+                    const score = itemScores[itemName] === undefined ? 0 : itemScores[itemName];
+                    totalItemScore += score;
+                    totalItemCount++;
+
+                    if (group.mappedPillars) {
+                        group.mappedPillars.forEach(pillarId => {
+                            if (pillarContributions[pillarId]) {
+                                pillarContributions[pillarId].total += score;
+                                pillarContributions[pillarId].count += 1;
+                            }
+                        });
+                    }
+                });
+            }
+
+            const overallTowerAverage = totalItemCount > 0 ? totalItemScore / totalItemCount : 0;
+
+            pillarsData.forEach(pillar => {
+                const contribution = pillarContributions[pillar.id];
+                const avgScore = contribution.count > 0 
+                    ? contribution.total / contribution.count 
+                    : overallTowerAverage;
+                towerPillarScores[towerName][pillar.id] = avgScore;
+            });
+        }
+
+
+        function getWeightedScore(towerName) {
+            calculatePillarScores(towerName);
+            let totalWeightedScore = 0;
+            const pillarScores = towerPillarScores[towerName];
+            pillarsData.forEach(pillar => {
+                const score = pillarScores[pillar.id] || 0;
+                const weight = pillar.weight / 100;
+                totalWeightedScore += score * weight;
+            });
+            return parseFloat(totalWeightedScore.toFixed(2));
+        }
+
+        function getLevelDetails(score) {
+            let maturityLevel = '';
+            let levelColor = '';
+            if (score < 1.0) { maturityLevel = 'Core'; levelColor = 'bg-slate-200 text-slate-800'; }
+            else if (score < 2.0) { maturityLevel = 'Established'; levelColor = 'bg-purple-100 text-purple-800'; }
+            else if (score < 3.0) { maturityLevel = 'Adaptive'; levelColor = 'bg-purple-200 text-purple-900'; }
+            else if (score < 4.0) { maturityLevel = 'Autonomous'; levelColor = 'bg-indigo-100 text-indigo-800'; }
+            else { maturityLevel = 'Disruptive'; levelColor = 'bg-indigo-200 text-indigo-900'; }
+            return { maturityLevel, levelColor };
+        }
+        
+        function updateAll() {
+            updateSummary(currentlySelectedTower);
+            updateDashboard();
+        }
+
+        function updateSummary(towerName) {
+            if (!towerName) {
+                 document.getElementById('total-score').textContent = "---";
+                 const levelDisplay = document.getElementById('maturity-level-display');
+                 levelDisplay.textContent = "N/A";
+                 levelDisplay.className = `inline-block text-xl font-semibold rounded-full px-5 py-1 bg-gray-200 text-gray-800`;
+                 renderSummarySliders(); 
+                return;
+            }
+
+            const totalWeightedScore = getWeightedScore(towerName);
+            const pillarScores = towerPillarScores[towerName];
+            
+            pillarsData.forEach(pillar => {
+                const score = pillarScores[pillar.id] || 0;
+                const slider = document.getElementById(`summary-slider-${pillar.id}`);
+                const valueDisplay = document.getElementById(`summary-value-${pillar.id}`);
+                if(slider) slider.value = score;
+                if(valueDisplay) valueDisplay.textContent = score.toFixed(2);
+            });
+            
+            document.getElementById('total-score').textContent = totalWeightedScore;
+            const levelDisplay = document.getElementById('maturity-level-display');
+            const { maturityLevel, levelColor } = getLevelDetails(totalWeightedScore);
+            levelDisplay.textContent = maturityLevel;
+            levelDisplay.className = `inline-block text-xl font-semibold rounded-full px-5 py-1 ${levelColor}`;
+        }
+        
+        function updateDashboard() {
+             const grid = document.getElementById('dashboard-results-grid');
+             grid.innerHTML = '';
+             chartInstances.forEach(chart => chart.destroy());
+             chartInstances = [];
+             
+             let overallTotalScore = 0;
+             let assessedTowersCount = selectedTowers.length;
+             
+             if (assessedTowersCount === 0) {
+                 grid.innerHTML = '<p class="text-center text-gray-500 col-span-full">No towers selected. Please make selections in the "Tower Selection" tab.</p>';
+                 document.getElementById('overall-dashboard-score').textContent = '0.00';
+                 const overallLevelDisplay = document.getElementById('overall-dashboard-level');
+                 overallLevelDisplay.textContent = 'Core';
+                 overallLevelDisplay.className = 'inline-block text-xl font-semibold bg-slate-200 text-slate-800 rounded-full px-5 py-1';
+                 return;
+             }
+
+             selectedTowers.forEach(towerName => {
+                 const score = getWeightedScore(towerName);
+                 overallTotalScore += score;
+                 const { maturityLevel, levelColor } = getLevelDetails(score);
+
+                 const card = document.createElement('div');
+                 card.className = 'p-4 border rounded-lg bg-slate-50 flex flex-col';
+                 card.innerHTML = `
+                    <div class="flex-grow">
+                        <h3 class="text-xl font-bold text-slate-800">${towerName}</h3>
+                        <div class="flex items-baseline gap-4 my-2">
+                             <p class="text-4xl font-bold text-purple-600">${score.toFixed(2)}</p>
+                             <p class="inline-block text-md font-semibold rounded-full px-4 py-1 ${levelColor}">${maturityLevel}</p>
+                        </div>
+                        <div class="h-64 mt-4"><canvas id="chart-${towerName.replace(/\s+/g, '-')}" class="w-full h-full"></canvas></div>
+                    </div>
+                 `;
+                 grid.appendChild(card);
+             });
+             
+             const averageScore = assessedTowersCount > 0 ? (overallTotalScore / assessedTowersCount) : 0;
+             document.getElementById('overall-dashboard-score').textContent = averageScore.toFixed(2);
+             const { maturityLevel: overallLevel, levelColor: overallColor } = getLevelDetails(averageScore);
+             const overallLevelDisplay = document.getElementById('overall-dashboard-level');
+             overallLevelDisplay.textContent = overallLevel;
+             overallLevelDisplay.className = `inline-block text-xl font-semibold rounded-full px-5 py-1 ${overallColor}`;
+
+
+             selectedTowers.forEach(towerName => {
+                 const ctx = document.getElementById(`chart-${towerName.replace(/\s+/g, '-')}`).getContext('2d');
+                 const chartData = pillarsData.map(p => towerPillarScores[towerName][p.id] || 0);
+                 const newChart = new Chart(ctx, {
+                     type: 'radar',
+                     data: {
+                         labels: pillarsData.map(p => p.name),
+                         datasets: [{
+                             label: 'Maturity Level',
+                             data: chartData,
+                             fill: true,
+                             backgroundColor: 'rgba(147, 51, 234, 0.2)',
+                             borderColor: 'rgb(147, 51, 234)',
+                             pointBackgroundColor: 'rgb(147, 51, 234)',
+                         }]
+                     },
+                     options: {
+                         responsive: true,
+                         maintainAspectRatio: false,
+                         scales: { r: { suggestedMin: 0, suggestedMax: 4, ticks: { stepSize: 1 } } },
+                         plugins: { legend: { display: false } }
+                     }
+                 });
+                 chartInstances.push(newChart);
+             });
+        }
+
+        init();
+    });
+</script>
+</body>
+</html>
+
